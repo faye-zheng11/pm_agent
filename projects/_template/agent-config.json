@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0",
+  "project_id": "replace-me",
+  "enabled_agents": [
+    "opportunity_researcher",
+    "product_shaper",
+    "user_experience_reviewer",
+    "independent_critic"
+  ],
+  "domain_packs": [],
+  "workflow_allowlist": ["pm-idea-to-delivery"],
+  "authority_ceiling": "draft_write",
+  "tool_overrides": {}
+}

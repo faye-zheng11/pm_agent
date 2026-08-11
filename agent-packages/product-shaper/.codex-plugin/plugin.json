@@ -1,0 +1,19 @@
+{
+  "name": "product-shaper",
+  "version": "2.0.0",
+  "description": "把一句模糊想法塑造成包含用户、机制、MVP、页面、流程和可证伪 Bet 的完整产品方案。",
+  "author": {
+    "name": "PM AI Workbench"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Product Shaper",
+    "shortDescription": "把模糊想法塑造成完整可验证产品方案",
+    "longDescription": "面向 PM 的产品塑形 Agent，通过追问形成完整文字方案、功能地图、信息架构、用户流程、风险和 Bet 草稿。",
+    "developerName": "PM AI Workbench",
+    "category": "Productivity",
+    "capabilities": ["多步 AgentEngine", "PMF Bet 与 PRD", "产品方案、设计任务与概念 Demo"],
+    "defaultPrompt": "使用 $product-shaper 把我的想法塑造成完整产品方案；先补齐关键问题，不要直接冒充正式 PRD。"
+  },
+  "mcpServers": "./.mcp.json"
+}

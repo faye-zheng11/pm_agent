@@ -1,0 +1,83 @@
+{
+  "schema_version": "2.0",
+  "id": "user-experience-reviewer",
+  "runtime_agent_id": "user_experience_reviewer",
+  "name": "用户试用",
+  "version": "2.0.0",
+  "mission": "用适合当前产品的模拟用户组真实走查想法、方案、PRD、Figma 或 HTML Demo，发现具体体验风险。",
+  "modes": [
+    {"id": "idea", "task_type": "ux.idea", "label": "评审想法", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 4, "max_handoffs": 1}},
+    {"id": "product_plan", "task_type": "ux.product", "label": "评审产品方案", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 4, "max_handoffs": 1}},
+    {"id": "prd", "task_type": "ux.prd", "label": "评审 PRD", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 5, "max_handoffs": 1}},
+    {"id": "html_demo", "task_type": "ux.demo", "label": "试用 HTML Demo", "project_required": false, "budget": {"max_model_steps": 12, "max_tool_calls": 8, "max_handoffs": 1}},
+    {"id": "figma", "task_type": "ux.figma", "label": "试用 Figma", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}}
+  ],
+  "inputs": [
+    {"id": "review_subject", "label": "要试用什么", "type": "textarea", "required": true},
+    {"id": "target_users", "label": "目标用户", "type": "text", "required": true},
+    {"id": "decision", "label": "评审要支持什么决定", "type": "textarea", "required": true},
+    {"id": "materials", "label": "PRD、截图、Demo 或 Figma", "type": "files", "required": false},
+    {"id": "focus", "label": "最担心什么", "type": "textarea", "required": false}
+  ],
+  "outputs": ["模拟用户组", "六段旅程走查", "可复现体验 Finding", "修改优先级", "真人研究问题"],
+  "protocols": [
+    "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/SKILL.md",
+    "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/operating-protocol.md",
+    "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/contract.md"
+  ],
+  "domain_knowledge": [
+    "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/domain-playbook.md",
+    "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/fan-persona-library.md",
+    "runtime/references/kpop-ai-companion.md",
+    "runtime/references/stage-gating.md"
+  ],
+  "core_skills": [],
+  "tools": ["project_memory", "material_inspector", "browser_review", "persona_review", "artifact_store", "data_gateway", "design_connector"],
+  "output_schema": "schemas/ux-reviewer-result.schema.json",
+  "ui": {"accent": "#9c4b61", "start_label": "让模拟用户试用", "result_sections": ["材料读取范围", "模拟用户", "六段旅程", "体验问题", "真人验证"]},
+  "runtime": {
+    "id": "user_experience_reviewer",
+    "name": "User Experience Reviewer · 用户试用",
+    "mission": "在明确模拟边界的前提下实际读取并操作材料，发现理解、动机、情绪、信任、文化、无障碍、安全和退出问题。",
+    "lifecycle_status": "core",
+    "accepted_task_types": ["ux.idea", "ux.product", "ux.prd", "ux.demo", "ux.figma"],
+    "required_context": ["review_subject", "target_users", "decision_to_support"],
+    "skills": [
+      "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/SKILL.md",
+      "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/operating-protocol.md",
+      "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/contract.md"
+    ],
+    "knowledge_assets": [
+      "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/domain-playbook.md",
+      "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/fan-persona-library.md",
+      "runtime/references/kpop-ai-companion.md",
+      "runtime/references/stage-gating.md"
+    ],
+    "allowed_tools": ["project_memory", "material_inspector", "browser_review", "persona_review", "artifact_store", "data_gateway", "design_connector"],
+    "output_schema": "schemas/ux-reviewer-result.schema.json",
+    "authority": {
+      "can": ["生成情境化模拟用户组", "实际读取与点击授权材料", "走查桌面与手机路径", "提出修改和真人研究问题"],
+      "cannot": ["把模拟反应写成真人结论", "未操作材料就声称完成交互评审", "固定套用 Persona", "替代安全、医学或正式无障碍审查"]
+    },
+    "reviewer": "independent_critic",
+    "stop_conditions": ["目标用户与评审对象均不明确", "关键材料不可访问且无法完成降级评审", "问题只能由真人研究回答"],
+    "retry_policy": {"max_attempts": 2, "backoff_seconds": 8}
+  },
+  "capability": {
+    "maturity": "L3",
+    "autonomy_budget": {"max_model_steps": 14, "max_tool_calls": 12, "max_handoffs": 1},
+    "operating_loop": ["inspect", "clarify", "plan", "act", "observe", "verify", "handoff", "stop"],
+    "input_requirements": [{"id": "review_brief", "description": "评审对象、目标用户、材料和要支持的决定", "required": true, "elicitation": "structured_form"}],
+    "verification_checks": [
+      {"id": "synthetic_boundary", "description": "模拟反应始终标为假设", "required": true},
+      {"id": "journey_coverage", "description": "覆盖进入、理解、尝试、反馈、复访和退出", "required": true},
+      {"id": "material_readback", "description": "视觉结论可追溯到实际读取材料", "required": true},
+      {"id": "interaction_trace", "description": "Demo 记录实际点击、视口、复现和失败路径；降级明确", "required": true},
+      {"id": "state_accessibility", "description": "状态覆盖、响应式与无障碍风险已检查", "required": true},
+      {"id": "actionability", "description": "重要问题有影响、修改、验收和真人验证问题", "required": true}
+    ],
+    "external_outputs": [],
+    "failure_policy": {"on_missing_input": "request_input", "on_tool_error": "retry_then_mark_unverified", "on_verification_failure": "block"}
+  },
+  "eval_file": "evals/cases.json"
+}

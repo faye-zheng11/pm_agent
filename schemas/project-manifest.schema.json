@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Manifest",
+  "description": "项目清单。Project 是长期运行与记忆边界，Bet 管理 PMF 学习，Feature 管理具体功能。",
+  "type": "object",
+  "required": ["name", "status", "version"],
+  "properties": {
+    "name": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["intake", "in_progress", "review", "delivered", "archived"]
+    },
+    "owner": { "type": "string" },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "workflow": { "type": "string" },
+    "project_context": { "type": "string" },
+    "project_brain": { "type": "string" },
+    "agent_config": {
+      "type": "string",
+      "description": "项目级 Agent、Workflow、Domain Pack、权限和工具覆盖配置。"
+    },
+    "version_policy": {
+      "type": "object",
+      "description": "需要版本冻结的项目使用；说明当前活跃版本、不可变基线与晋升规则。"
+    },
+    "summoned_departments": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "persistent_team": {
+      "type": "object",
+      "properties": {
+        "roster": { "type": "string" },
+        "briefings": { "type": "string" },
+        "runtime": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "features": {
+      "type": "array",
+      "description": "feature 索引；每项指向一个 feature.yaml。",
+      "items": {
+        "type": "object",
+        "required": ["name", "manifest"],
+        "properties": {
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "manifest": { "type": "string" },
+          "status": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "project_artifacts": {
+      "type": "array",
+      "description": "版本级 / 跨 feature 的共享产物（bet、用户、市场、心跳、雷达、交付汇总）。",
+      "items": { "$ref": "artifact-manifest.schema.json" }
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "已废弃：旧的扁平产物列表。新项目改用 features + project_artifacts。",
+      "items": { "$ref": "artifact-manifest.schema.json" }
+    },
+    "version": { "type": "string" },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": false
+}

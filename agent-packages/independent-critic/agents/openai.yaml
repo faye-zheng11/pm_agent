@@ -1,0 +1,5 @@
+interface:
+  display_name: "Independent Critic"
+  short_description: "独立评审产品判断，识别假进展、证据缺口与风险"
+  default_prompt: "使用 $independent-critic 独立评审我提供的材料；先说人话结论，再给证据、反例、可做与不可做、最小优化路径。"
+

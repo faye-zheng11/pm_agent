@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PM Workbench Agent Task",
+  "type": "object",
+  "required": ["schema_version", "id", "project_id", "work_unit", "goal", "decision_to_support", "task_type", "assigned_agent", "source_artifacts", "evidence_requirements", "upstream_results", "allowed_tools", "authority_level", "expected_output_schema", "reviewer_agent", "idempotency_key", "status", "attempt", "created_at", "updated_at"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "id": {"type": "string", "pattern": "^task-[a-z0-9-]+$"},
+    "project_id": {"type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"},
+    "version": {"type": "string"},
+    "work_unit": {"enum": ["project", "bet", "feature", "conversation", "workbench"]},
+    "work_unit_id": {"type": "string"},
+    "goal": {"type": "string", "minLength": 1},
+    "decision_to_support": {"type": "string", "minLength": 1},
+    "task_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"},
+    "assigned_agent": {"type": "string"},
+    "source_artifacts": {"type": "array", "items": {"type": "string"}},
+    "evidence_requirements": {"type": "array", "items": {"type": "string"}},
+    "upstream_results": {"type": "array", "items": {"type": "object"}},
+    "allowed_tools": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "authority_level": {"enum": ["read_only", "draft_write", "reversible_action", "external_action"]},
+    "expected_output_schema": {"type": "string"},
+    "reviewer_agent": {"type": "string"},
+    "idempotency_key": {"type": "string", "minLength": 8, "maxLength": 200},
+    "status": {"enum": ["queued", "running", "waiting_input", "waiting_approval", "blocked", "retrying", "completed", "failed", "cancelled"]},
+    "attempt": {"type": "integer", "minimum": 0},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PM Workbench Approval",
+  "type": "object",
+  "required": ["schema_version", "id", "task_id", "approval_type", "status", "requested_by", "created_at", "updated_at"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "id": {"type": "string"},
+    "task_id": {"type": "string"},
+    "approval_type": {"enum": ["canon_write", "decision_confirm", "bet_activate", "feature_create", "prd_approve", "external_write", "release", "destructive_action"]},
+    "status": {"enum": ["pending", "approved", "rejected", "cancelled"]},
+    "requested_by": {"type": "string"},
+    "decided_by": {"type": "string"},
+    "decision_note": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false
+}

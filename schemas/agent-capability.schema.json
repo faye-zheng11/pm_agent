@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PM Workbench Agent Capability Profiles",
+  "type": "object",
+  "required": ["schema_version", "capabilities"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["agent_id", "maturity", "autonomy_budget", "operating_loop", "input_requirements", "verification_checks", "external_outputs", "eval_case_ids", "failure_policy"],
+        "properties": {
+          "agent_id": {"type": "string"},
+          "maturity": {"enum": ["L1", "L2", "L3", "L4"]},
+          "autonomy_budget": {
+            "type": "object",
+            "required": ["max_model_steps", "max_tool_calls", "max_handoffs"],
+            "properties": {
+              "max_model_steps": {"type": "integer", "minimum": 1, "maximum": 20},
+              "max_tool_calls": {"type": "integer", "minimum": 0, "maximum": 30},
+              "max_handoffs": {"type": "integer", "minimum": 0, "maximum": 10}
+            },
+            "additionalProperties": false
+          },
+          "operating_loop": {
+            "type": "array",
+            "minItems": 3,
+            "items": {"enum": ["inspect", "clarify", "plan", "act", "observe", "verify", "handoff", "stop"]}
+          },
+          "input_requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "description", "required", "elicitation"],
+              "properties": {
+                "id": {"type": "string"},
+                "description": {"type": "string"},
+                "required": {"type": "boolean"},
+                "elicitation": {"enum": ["project_context", "structured_form", "external_url"]}
+              },
+              "additionalProperties": false
+            }
+          },
+          "verification_checks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "description", "required"],
+              "properties": {
+                "id": {"type": "string"},
+                "description": {"type": "string"},
+                "required": {"type": "boolean"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "external_outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["tool", "status", "requires_target", "requires_approval", "verification"],
+              "properties": {
+                "tool": {"type": "string"},
+                "status": {"enum": ["active", "planned"]},
+                "requires_target": {"type": "boolean"},
+                "requires_approval": {"type": "boolean"},
+                "verification": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "eval_case_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "failure_policy": {
+            "type": "object",
+            "required": ["on_missing_input", "on_tool_error", "on_verification_failure"],
+            "properties": {
+              "on_missing_input": {"enum": ["request_input", "block"]},
+              "on_tool_error": {"enum": ["retry", "block", "request_input"]},
+              "on_verification_failure": {"enum": ["revise", "block", "request_approval"]}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

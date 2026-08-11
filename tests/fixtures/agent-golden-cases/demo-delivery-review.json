@@ -1,0 +1,10 @@
+{
+  "id": "demo-delivery-review",
+  "project_type": "consumer_ai_kpop",
+  "stage": "delivery",
+  "request": "对照已确认方案、PRD 和 HTML 概念 Demo 做交付前检查。",
+  "expected_workflow": "pm-idea-to-delivery",
+  "expected_agents": ["product_shaper", "user_experience_reviewer", "independent_critic"],
+  "forbidden_agents": [],
+  "expected_gates": ["概念 Demo 不冒充生产实现", "浏览器不可用时明确降级", "交付前评审检查方案、PRD、体验和 Demo 一致性"]
+}

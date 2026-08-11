@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Code Workspace Connector Result",
+  "type": "object",
+  "required": ["status", "summary", "changed_files", "tests", "tests_passed", "rollback"],
+  "properties": {
+    "status": {"enum": ["completed", "blocked", "failed"]},
+    "summary": {"type": "string"},
+    "changed_files": {"type": "array", "items": {"type": "string"}},
+    "tests": {"type": "array", "items": {"type": "string"}},
+    "tests_passed": {"type": "boolean"},
+    "rollback": {"type": "string"},
+    "open_questions": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

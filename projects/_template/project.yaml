@@ -1,0 +1,26 @@
+schema_version: "2.0"
+project: "replace-me"
+updated_at: ""
+stage: discovery
+version: v0.1
+objective: ""
+active_bet: ""
+active_feature: ""
+identity:
+  category: "K-pop / 粉丝产品 / AI 陪伴"
+  audience_category: ""
+pmf_rules:
+  require_falsifiable_bet_before_delivery: true
+  require_real_user_evidence: true
+  synthetic_persona_is_evidence: false
+context:
+  human_entry: HOME.md
+  required_read: PROJECT-CONTEXT.md
+  canon: memory/canon.md
+  assumptions: memory/assumptions.md
+  evidence: memory/evidence.md
+  decisions: memory/decisions/
+writeback:
+  evidence_requires_source: true
+  canon_requires_pm_confirmation: true
+  decisions_require_pm_confirmation: true

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PMF Bet Manifest",
+  "type": "object",
+  "required": ["id", "project", "status", "segment", "job", "hypothesis", "decision_rules"],
+  "properties": {
+    "id": { "type": "string" },
+    "project": { "type": "string" },
+    "version": { "type": "string" },
+    "status": { "type": "string", "enum": ["proposed", "active", "supported", "rejected", "superseded"] },
+    "segment": { "type": "string" },
+    "job": { "type": "string" },
+    "hypothesis": { "type": "string" },
+    "current_alternative": { "type": "string" },
+    "evidence_gap": { "type": "string" },
+    "test": { "type": "string" },
+    "signals": { "type": "array", "items": { "type": "string" } },
+    "decision_rules": {
+      "type": "object",
+      "required": ["continue", "narrow", "pivot", "stop"],
+      "properties": {
+        "continue": { "type": "string" },
+        "narrow": { "type": "string" },
+        "pivot": { "type": "string" },
+        "stop": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "owner": { "type": "string" },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" }
+  },
+  "additionalProperties": false
+}

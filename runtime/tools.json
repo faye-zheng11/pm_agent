@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "tools": [
+    {
+      "id": "project_memory",
+      "name": "Project Memory",
+      "risk": "read_only",
+      "approval": "never",
+      "description": "读取、搜索 Project Context、Canon、Assumptions、Evidence、Decisions、Bet 和 Feature，并生成带来源的 context_snapshot / decision_readiness。"
+    },
+    {
+      "id": "artifact_store",
+      "name": "Artifact Store",
+      "risk": "draft_write",
+      "approval": "policy",
+      "description": "在任务授权的目标路径写入草稿产物或写回候选，不直接修改 Canon。"
+    },
+    {
+      "id": "web_research",
+      "name": "Web Research",
+      "risk": "read_only",
+      "approval": "never",
+      "description": "搜索和读取公开网页，结果必须保留来源、日期和证据限制。"
+    },
+    {
+      "id": "social_ingest",
+      "name": "Public Social Ingest",
+      "risk": "read_only",
+      "approval": "never",
+      "description": "采集公开 Reddit 搜索结果，或归一用户提供的 MediaCrawler / X 导出；统一输出带平台、URL、日期、互动与证据边界的帖子记录。"
+    },
+    {
+      "id": "signal_ledger",
+      "name": "Opportunity Signal Ledger",
+      "risk": "draft_write",
+      "approval": "policy",
+      "description": "按 Project 保存机会信号，支持查重、更新、过期、淘汰和转入 Product Shaper；不修改 Canon。"
+    },
+    {
+      "id": "material_inspector",
+      "name": "Review Material Inspector",
+      "risk": "read_only",
+      "approval": "never",
+      "description": "读取任务授权的文档、图片、HTML Demo 或公开 Figma 链接，并返回实际读取范围与未验证部分。"
+    },
+    {
+      "id": "browser_review",
+      "name": "Browser Review",
+      "risk": "read_only",
+      "approval": "never",
+      "description": "用 Playwright 打开授权的本地 HTML 或公开 URL，在桌面和手机视口执行点击、截图、溢出与交互检查；不可用时返回明确降级状态。"
+    },
+    {
+      "id": "finding_ledger",
+      "name": "Finding Ledger",
+      "risk": "draft_write",
+      "approval": "policy",
+      "description": "在当前项目维护独立评审 Finding 的 open、fixed、accepted_risk 和 obsolete 状态，并保留首次发现与复审记录。"
+    },
+    {
+      "id": "demo_builder",
+      "name": "Concept Demo Builder",
+      "risk": "draft_write",
+      "approval": "policy",
+      "description": "根据已确认的 Product Shape 生成无真实数据库的交互 HTML 概念 Demo，并明确标注非生产实现。"
+    },
+    {
+      "id": "demo_html",
+      "name": "LLM HTML Demo Generator",
+      "risk": "draft_write",
+      "approval": "policy",
+      "description": "调用 Product Shaper 的移动设计协议生成自包含、可点击的 HTML 概念 Demo；不连接生产数据库。"
+    },
+    {
+      "id": "local_analysis",
+      "name": "Local Analysis",
+      "risk": "read_only",
+      "approval": "never",
+      "description": "分析用户提供的本地数据文件并保存可复现画像。"
+    },
+    {
+      "id": "data_gateway",
+      "name": "Project Data Gateway",
+      "risk": "read_only",
+      "approval": "policy",
+      "description": "通过项目配置的数据网关执行只读业务查询。"
+    },
+    {
+      "id": "persona_review",
+      "name": "Synthetic Persona Review",
+      "risk": "read_only",
+      "approval": "never",
+      "description": "用可切换的粉丝群体视角模拟体验反应；结果始终标注为 Synthetic，不替代真人研究。"
+    },
+    {
+      "id": "design_connector",
+      "name": "Design Connector",
+      "risk": "external_action",
+      "approval": "always",
+      "description": "向外部设计工具创建或修改可编辑设计。"
+    },
+    {
+      "id": "document_connector",
+      "name": "Document Connector",
+      "risk": "external_action",
+      "approval": "always",
+      "description": "向外部文档系统写入或同步内容。"
+    },
+    {
+      "id": "code_workspace",
+      "name": "Code Workspace",
+      "risk": "reversible_action",
+      "approval": "policy",
+      "description": "在明确范围内修改代码、运行测试并生成交付记录。"
+    }
+  ]
+}

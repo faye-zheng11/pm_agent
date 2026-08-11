@@ -1,0 +1,78 @@
+{
+  "schema_version": "2.0",
+  "id": "opportunity-researcher",
+  "runtime_agent_id": "opportunity_researcher",
+  "name": "找机会",
+  "version": "2.0.0",
+  "mission": "从公开用户内容、社区、竞品、应用商店和行业资料中发现有来源、可验证、可转成产品行动的机会。",
+  "modes": [
+    {"id": "casual_scan", "task_type": "opportunity.scan", "label": "随便看看", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 6, "max_handoffs": 1}},
+    {"id": "new_project", "task_type": "opportunity.new_project", "label": "新项目找方向", "project_required": false, "budget": {"max_model_steps": 12, "max_tool_calls": 10, "max_handoffs": 1}},
+    {"id": "current_product", "task_type": "opportunity.current_product", "label": "现有产品找迭代机会", "project_required": true, "budget": {"max_model_steps": 12, "max_tool_calls": 8, "max_handoffs": 1}}
+  ],
+  "inputs": [
+    {"id": "topic", "label": "想研究什么", "type": "textarea", "required": true},
+    {"id": "target_audience", "label": "关注谁", "type": "text", "required": true},
+    {"id": "decision", "label": "这次研究要支持什么决定", "type": "textarea", "required": true},
+    {"id": "time_range", "label": "时间范围", "type": "text", "required": false},
+    {"id": "source_strategy", "label": "来源策略", "type": "choice", "options": ["自动规划", "公开网页 + Reddit", "导入 X / 小红书导出", "只用我提供的材料"], "required": false},
+    {"id": "source_urls", "label": "已有链接", "type": "urls", "required": false}
+  ],
+  "outputs": ["最多五条可回读机会信号", "来源快照与证据边界", "信号台账", "Product Shaper 交接包"],
+  "protocols": [
+    "agent-packages/opportunity-researcher/skills/opportunity-researcher/SKILL.md",
+    "agent-packages/opportunity-researcher/skills/opportunity-researcher/references/operating-protocol.md"
+  ],
+  "domain_knowledge": [
+    "agent-packages/opportunity-researcher/skills/opportunity-researcher/references/domain-playbook.md",
+    "runtime/references/kpop-ai-companion.md",
+    "runtime/references/stage-gating.md"
+  ],
+  "core_skills": [],
+  "tools": ["web_research", "social_ingest", "project_memory", "signal_ledger", "artifact_store", "data_gateway"],
+  "output_schema": "schemas/opportunity-result.schema.json",
+  "ui": {"accent": "#16735f", "start_label": "开始寻找机会", "result_sections": ["机会信号", "来源与限制", "可测试想法", "下一步"]},
+  "runtime": {
+    "id": "opportunity_researcher",
+    "name": "Opportunity Researcher · 找机会",
+    "mission": "完成多轮公开研究、原文回读、多源交叉和信号台账维护，只输出能改变产品判断的机会。",
+    "lifecycle_status": "core",
+    "accepted_task_types": ["opportunity.scan", "opportunity.new_project", "opportunity.current_product"],
+    "required_context": ["decision_to_support", "target_audience", "research_topic"],
+    "skills": [
+      "agent-packages/opportunity-researcher/skills/opportunity-researcher/SKILL.md",
+      "agent-packages/opportunity-researcher/skills/opportunity-researcher/references/operating-protocol.md"
+    ],
+    "knowledge_assets": [
+      "agent-packages/opportunity-researcher/skills/opportunity-researcher/references/domain-playbook.md",
+      "runtime/references/kpop-ai-companion.md",
+      "runtime/references/stage-gating.md"
+    ],
+    "allowed_tools": ["project_memory", "web_research", "social_ingest", "signal_ledger", "artifact_store", "data_gateway"],
+    "output_schema": "schemas/opportunity-result.schema.json",
+    "authority": {
+      "can": ["递归检索公开网页", "回读与交叉核验原文", "维护机会信号生命周期", "形成产品机会交接包"],
+      "cannot": ["声称读取登录后或私密社媒", "把热度当需求", "伪造 URL、原话或用户证据", "替 PM 决定立项"]
+    },
+    "reviewer": "independent_critic",
+    "stop_conditions": ["研究主题与决策用途均不明确", "来源无法回读且无替代来源", "可靠信号不足时返回无信号而非凑数"],
+    "retry_policy": {"max_attempts": 3, "backoff_seconds": 10}
+  },
+  "capability": {
+    "maturity": "L3",
+    "autonomy_budget": {"max_model_steps": 14, "max_tool_calls": 12, "max_handoffs": 1},
+    "operating_loop": ["inspect", "clarify", "plan", "act", "observe", "verify", "handoff", "stop"],
+    "input_requirements": [{"id": "research_brief", "description": "主题、目标人群、时间范围和要支持的决定", "required": true, "elicitation": "structured_form"}],
+    "verification_checks": [
+      {"id": "source_trace", "description": "每条信号有可回读 URL、访问日期与来源类型", "required": true},
+      {"id": "original_readback", "description": "关键来源已回读正文而非只看搜索摘要", "required": true},
+      {"id": "triangulation", "description": "高优先信号完成多源交叉或明确单源限制", "required": true},
+      {"id": "claim_boundary", "description": "事实、推断、假设与证据不足分开", "required": true},
+      {"id": "ledger_lifecycle", "description": "完成去重、过期与转入状态检查", "required": true},
+      {"id": "actionability", "description": "信号包含行为、替代和最快验证", "required": true}
+    ],
+    "external_outputs": [{"tool": "web_research", "status": "active", "requires_target": false, "requires_approval": false, "verification": "保留回读 URL、访问日期和实际读取范围"}],
+    "failure_policy": {"on_missing_input": "request_input", "on_tool_error": "retry_then_mark_unverified", "on_verification_failure": "block"}
+  },
+  "eval_file": "evals/cases.json"
+}

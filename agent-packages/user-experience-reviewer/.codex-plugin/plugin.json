@@ -1,0 +1,19 @@
+{
+  "name": "user-experience-reviewer",
+  "version": "2.0.0",
+  "description": "让适合当前产品的模拟用户完整走查想法、PRD、截图、Figma 或 HTML Demo，并输出具体风险和真人研究问题。",
+  "author": {
+    "name": "PM AI Workbench"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "User Experience Reviewer",
+    "shortDescription": "用模拟用户完整走查产品并发现体验风险",
+    "longDescription": "面向 PM 的体验评审 Agent，覆盖进入、理解、尝试、反馈、复访和退出，分开真实证据与模拟假设。",
+    "developerName": "PM AI Workbench",
+    "category": "Productivity",
+    "capabilities": ["多步 AgentEngine", "Playwright 桌面与手机走查", "六段旅程与体验 Finding"],
+    "defaultPrompt": "使用 $user-experience-reviewer 走查我提供的产品材料，指出具体流失、误解、信任和安全风险，并给出真人验证问题。"
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Independent Critic Structured Review",
+  "type": "object",
+  "required": [
+    "review_mode",
+    "stage_assessment",
+    "verdict",
+    "plain_language_summary",
+    "decision_dimensions",
+    "steelman",
+    "claims",
+    "findings",
+    "counterexamples",
+    "what_would_change_my_mind",
+    "competitive_context",
+    "optimization_directions",
+    "unverified",
+    "pm_decisions_required",
+    "self_review"
+  ],
+  "properties": {
+    "review_mode": {
+      "enum": ["quick_review", "evidence_review", "decision_review", "definition_review", "experience_review", "delivery_review", "project_diagnosis"]
+    },
+    "stage_assessment": {
+      "type": "object",
+      "required": ["stage", "basis", "confidence"],
+      "properties": {
+        "stage": {"enum": ["exploration", "validation", "scaling", "maintenance", "unknown"]},
+        "basis": {"type": "string", "minLength": 1},
+        "confidence": {"enum": ["low", "medium", "high"]}
+      },
+      "additionalProperties": false
+    },
+    "verdict": {"enum": ["Pass", "Conditional", "Block"]},
+    "plain_language_summary": {"type": "string", "minLength": 20},
+    "decision_dimensions": {
+      "type": "object",
+      "required": ["need_validity", "product_value", "execution_feasibility", "stage_readiness"],
+      "properties": {
+        "need_validity": {"enum": ["supported", "partially_supported", "unsupported", "not_reviewed"]},
+        "product_value": {"enum": ["supported", "partially_supported", "unsupported", "not_reviewed"]},
+        "execution_feasibility": {"enum": ["supported", "partially_supported", "unsupported", "not_reviewed"]},
+        "stage_readiness": {"enum": ["supported", "partially_supported", "unsupported", "not_reviewed"]}
+      },
+      "additionalProperties": false
+    },
+    "steelman": {"type": "string", "minLength": 1},
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["claim", "classification", "evidence_grade", "assessment", "evidence_refs"],
+        "properties": {
+          "claim": {"type": "string", "minLength": 1},
+          "classification": {"enum": ["fact", "evidence", "assumption", "inference", "recommendation", "decision_candidate"]},
+          "evidence_grade": {"enum": ["A", "B", "C", "unknown"]},
+          "assessment": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "evidence_grade", "issue", "impact", "required_action", "owner", "acceptance_criteria", "evidence_refs"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["blocker", "major", "minor"]},
+          "evidence_grade": {"enum": ["A", "B", "C", "unknown"]},
+          "issue": {"type": "string", "minLength": 1},
+          "impact": {"type": "string", "minLength": 1},
+          "required_action": {"type": "string"},
+          "owner": {"type": "string"},
+          "acceptance_criteria": {"type": "string"},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "counterexamples": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "what_would_change_my_mind": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "competitive_context": {
+      "type": "object",
+      "required": ["status", "summary", "source_refs"],
+      "properties": {
+        "status": {"enum": ["reviewed", "not_required", "not_available"]},
+        "summary": {"type": "string", "minLength": 1},
+        "source_refs": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "optimization_directions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["priority", "direction", "why", "validation"],
+        "properties": {
+          "priority": {"enum": ["now", "next", "later"]},
+          "direction": {"type": "string", "minLength": 1},
+          "why": {"type": "string", "minLength": 1},
+          "validation": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "unverified": {"type": "array", "items": {"type": "string"}},
+    "pm_decisions_required": {"type": "array", "items": {"type": "string"}},
+    "self_review": {
+      "type": "object",
+      "required": ["score", "max_score", "passed", "notes"],
+      "properties": {
+        "score": {"type": "integer", "minimum": 0, "maximum": 16},
+        "max_score": {"const": 16},
+        "passed": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

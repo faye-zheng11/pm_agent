@@ -1,0 +1,10 @@
+{
+  "id": "kpop-opportunity-to-product",
+  "project_type": "consumer_ai_kpop",
+  "stage": "pre_pmf",
+  "request": "围绕粉丝情绪陪伴机会判断是否值得做，并形成可验证的产品方案。",
+  "expected_workflow": "pm-idea-to-delivery",
+  "expected_agents": ["opportunity_researcher", "product_shaper", "user_experience_reviewer", "independent_critic"],
+  "forbidden_agents": [],
+  "expected_gates": ["保留公开来源和证据边界", "没有可证伪 Bet 不进入正式交付", "独立评审后由 PM 决定"]
+}

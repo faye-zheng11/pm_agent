@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"Opportunity Researcher Result","allOf":[{"$ref":"agent-result.schema.json"},{"type":"object","required":["opportunity_research"],"properties":{"opportunity_research":{"$ref":"opportunity-research.schema.json"}}}]}

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PM Workbench Agent Result",
+  "type": "object",
+  "required": ["schema_version", "task_id", "agent_id", "status", "summary", "conclusions", "artifacts", "open_questions", "recommended_handoffs", "writeback_candidates", "verification", "trace"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "task_id": {"type": "string"},
+    "agent_id": {"type": "string"},
+    "status": {"enum": ["completed", "blocked", "needs_input", "failed"]},
+    "summary": {"type": "string"},
+    "conclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["statement", "classification", "confidence", "evidence_refs"],
+        "properties": {
+          "statement": {"type": "string"},
+          "classification": {"enum": ["fact", "evidence", "assumption", "inference", "recommendation", "decision_candidate"]},
+          "confidence": {"enum": ["low", "medium", "high"]},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "artifacts": {"type": "array", "items": {"type": "string"}},
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "recommended_handoffs": {"type": "array", "items": {"$ref": "agent-handoff.schema.json"}},
+    "writeback_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["classification", "destination", "content", "requires_pm_approval"],
+        "properties": {
+          "classification": {"enum": ["canon", "assumption", "evidence", "decision", "feature", "briefing"]},
+          "destination": {"type": "string"},
+          "content": {"type": "string"},
+          "requires_pm_approval": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "critic_review": {"$ref": "critic-review.schema.json"},
+    "opportunity_research": {"$ref": "opportunity-research.schema.json"},
+    "product_shape": {"$ref": "product-shape.schema.json"},
+    "ux_review": {"$ref": "ux-review.schema.json"},
+    "verification": {
+      "type": "object",
+      "required": ["status", "summary", "checks"],
+      "properties": {
+        "status": {"enum": ["passed", "failed", "not_applicable"]},
+        "summary": {"type": "string"},
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "status", "evidence"],
+            "properties": {
+              "id": {"type": "string"},
+              "status": {"enum": ["passed", "failed", "not_applicable"]},
+              "evidence": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "trace": {
+      "type": "object",
+      "required": ["skills", "tools", "source_artifacts"],
+      "properties": {
+        "skills": {"type": "array", "items": {"type": "string"}},
+        "tools": {"type": "array", "items": {"type": "string"}},
+        "source_artifacts": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

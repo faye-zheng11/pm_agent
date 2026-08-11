@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Independent Critic Agent Result",
+  "description": "通用 Agent Result 加上 independent-critic 必需的结构化评审。",
+  "allOf": [
+    {"$ref": "agent-result.schema.json"},
+    {
+      "type": "object",
+      "required": ["critic_review"],
+      "properties": {
+        "critic_review": {"$ref": "critic-review.schema.json"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PM Workbench Project Agent Configuration",
+  "type": "object",
+  "required": ["schema_version", "project_id", "enabled_agents", "domain_packs", "workflow_allowlist", "authority_ceiling", "tool_overrides"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "project_id": {"type": "string"},
+    "enabled_agents": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "domain_packs": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "workflow_allowlist": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "authority_ceiling": {"enum": ["read_only", "draft_write", "reversible_action", "external_action"]},
+    "tool_overrides": {"type": "object"}
+  },
+  "additionalProperties": false
+}

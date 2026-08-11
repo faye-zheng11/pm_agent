@@ -1,0 +1,5 @@
+interface:
+  display_name: "User Experience Reviewer"
+  short_description: "用模拟用户完整走查产品并发现具体体验风险"
+  default_prompt: "使用 $user-experience-reviewer 走查我提供的产品材料，指出具体流失、误解、信任和安全风险，并给出真人验证问题。"
+

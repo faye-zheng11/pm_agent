@@ -1,0 +1,5 @@
+interface:
+  display_name: "Product Shaper"
+  short_description: "把模糊想法塑造成完整、可验证的产品方案"
+  default_prompt: "使用 $product-shaper 把我的想法塑造成完整产品方案；先补齐关键问题，不要直接冒充正式 PRD。"
+

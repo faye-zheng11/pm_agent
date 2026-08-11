@@ -1,0 +1,30 @@
+# ── 机密：绝不入库 ──
+bootstrap/internal-gateway.key
+**/auth.json
+**/tavily-api-key
+**/tavily-api-key.txt
+
+# ── 真实项目数据 / 运行库（每个项目只存本机）──
+projects/*
+!projects/_template
+.workbench/
+**/.workbench/
+*.db
+**/*.sqlite
+**/*.sqlite3
+
+# ── 生成物（setup.command 会用 export_agent_package.py 重建）──
+.agents/plugins/plugins/
+
+# ── HTML 工作台：改用 Codex/Claude，不随库分发 ──
+pm-workbench.html
+start.command
+
+# ── 过期报告 / 缓存 / 系统文件 ──
+EVAL-SMOKE-REPORT.md
+**/__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.idea/
+.vscode/

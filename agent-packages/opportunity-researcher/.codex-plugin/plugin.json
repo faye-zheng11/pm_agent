@@ -1,0 +1,19 @@
+{
+  "name": "opportunity-researcher",
+  "version": "2.0.0",
+  "description": "从公开来源发现可回溯、可验证的产品机会，并严格区分事实、推断和证据不足。",
+  "author": {
+    "name": "PM AI Workbench"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Opportunity Researcher",
+    "shortDescription": "从公开来源发现可验证的产品机会信号",
+    "longDescription": "面向 PM 的机会发现 Agent，支持新项目找方向、随便看看和现有产品迭代研究，保留来源、日期、证据等级和限制。",
+    "developerName": "PM AI Workbench",
+    "category": "Productivity",
+    "capabilities": ["多步 AgentEngine", "公开研究与社媒归一", "信号台账与可追溯 Trace"],
+    "defaultPrompt": "使用 $opportunity-researcher 研究我提供的主题，最多返回五条有来源、可验证、可行动的机会信号。"
+  },
+  "mcpServers": "./.mcp.json"
+}

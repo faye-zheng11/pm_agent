@@ -1,0 +1,6 @@
+interface:
+  display_name: "PMF Bet Brief"
+  short_description: "把想法变成可证伪、可复盘的产品下注"
+  default_prompt: "使用 $pmf-bet-brief 将当前想法整理成可证伪 Bet；区分事实、推断和假设，并给出实验、指标口径、观察窗与停止条件。"
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Figma Design Connector Result",
+  "type": "object",
+  "required": ["status", "file_url", "node_ids", "summary", "structure_verified", "screenshot_verified"],
+  "properties": {
+    "status": {"enum": ["completed", "blocked", "failed"]},
+    "file_url": {"type": "string"},
+    "node_ids": {"type": "array", "items": {"type": "string"}},
+    "summary": {"type": "string"},
+    "structure_verified": {"type": "boolean"},
+    "screenshot_verified": {"type": "boolean"},
+    "open_questions": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

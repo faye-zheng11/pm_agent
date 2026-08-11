@@ -1,0 +1,20 @@
+# schema: schemas/bet-manifest.schema.json
+id: ""
+project: ""
+version: ""
+status: proposed
+segment: ""
+job: ""
+hypothesis: ""
+current_alternative: ""
+evidence_gap: ""
+test: ""
+signals: []
+decision_rules:
+  continue: ""
+  narrow: ""
+  pivot: ""
+  stop: ""
+owner: ""
+created_at: ""
+updated_at: ""

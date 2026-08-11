@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"UX Reviewer Result","allOf":[{"$ref":"agent-result.schema.json"},{"type":"object","required":["ux_review"],"properties":{"ux_review":{"$ref":"ux-review.schema.json"}}}]}

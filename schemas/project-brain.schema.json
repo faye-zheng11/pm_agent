@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Brain",
+  "type": "object",
+  "required": ["schema_version", "project", "stage", "objective", "identity", "context", "writeback"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "project": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "stage": { "type": "string", "enum": ["discovery", "pre_pmf", "scaling", "mature", "archived"] },
+    "active_version": { "type": "string" },
+    "objective": { "type": "string" },
+    "identity": { "type": "object" },
+    "confirmed_context": { "type": "array", "items": { "type": "string" } },
+    "unconfirmed": { "type": "array", "items": { "type": "string" } },
+    "pmf_rules": { "type": "object" },
+    "context": { "type": "object" },
+    "writeback": { "type": "object" }
+  },
+  "additionalProperties": false
+}

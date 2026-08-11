@@ -1,0 +1,5 @@
+interface:
+  display_name: "Opportunity Researcher"
+  short_description: "从公开来源发现可验证、可回溯的产品机会信号"
+  default_prompt: "使用 $opportunity-researcher 研究我提供的主题，最多返回五条有来源、可验证、可行动的机会信号。"
+

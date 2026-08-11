@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Artifact Manifest",
+  "type": "object",
+  "required": ["path", "type", "readiness"],
+  "properties": {
+    "path": { "type": "string" },
+    "type": {
+      "type": "string",
+      "enum": ["brief", "opportunity", "expert_review", "user_perspective", "prd", "business_annotations", "design_spec", "ui_demo_spec", "stories", "tracking_plan", "analysis_plan", "retrospective", "delivery", "other"]
+    },
+    "version": { "type": "string" },
+    "audience": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "readiness": {
+      "type": "string",
+      "enum": ["empty", "draft", "review", "ready", "blocked"]
+    }
+  },
+  "additionalProperties": false
+}

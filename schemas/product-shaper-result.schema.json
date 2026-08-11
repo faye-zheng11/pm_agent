@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"Product Shaper Result","allOf":[{"$ref":"agent-result.schema.json"},{"type":"object","required":["product_shape"],"properties":{"product_shape":{"$ref":"product-shape.schema.json"}}}]}

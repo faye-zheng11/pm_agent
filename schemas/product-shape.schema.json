@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product Shape",
+  "type": "object",
+  "required": ["mode", "one_line_product", "target_users", "use_scenarios", "jobs", "problem", "alternatives", "value_proposition", "product_mechanism", "differentiation", "mvp_features", "non_goals", "information_architecture", "core_flow", "key_states", "facts", "assumptions", "evidence_gaps", "risks", "pm_decisions_required", "bet_draft", "prototype_recommendation", "handoff_summary"],
+  "properties": {
+    "mode": {"enum": ["new_product", "existing_feature", "prd_delivery", "design_delivery", "concept_demo"]},
+    "one_line_product": {"type": "string", "minLength": 10},
+    "target_users": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["segment", "where_to_find", "context", "need"], "properties": {"segment": {"type": "string"}, "where_to_find": {"type": "string"}, "context": {"type": "string"}, "need": {"type": "string"}}, "additionalProperties": false}},
+    "use_scenarios": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "jobs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "problem": {"type": "string", "minLength": 20},
+    "alternatives": {"type": "array", "items": {"type": "string"}},
+    "value_proposition": {"type": "string", "minLength": 10},
+    "product_mechanism": {"type": "string", "minLength": 10},
+    "differentiation": {"type": "string"},
+    "mvp_features": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["name", "priority", "user_value", "rationale"], "properties": {"name": {"type": "string"}, "priority": {"enum": ["must", "should", "later"]}, "user_value": {"type": "string"}, "rationale": {"type": "string"}}, "additionalProperties": false}},
+    "non_goals": {"type": "array", "items": {"type": "string"}},
+    "information_architecture": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["page", "purpose", "key_content"], "properties": {"page": {"type": "string"}, "purpose": {"type": "string"}, "key_content": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false}},
+    "core_flow": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+    "key_states": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "facts": {"type": "array", "items": {"type": "string"}},
+    "assumptions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "evidence_gaps": {"type": "array", "items": {"type": "string"}},
+    "risks": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["risk", "impact", "mitigation"], "properties": {"risk": {"type": "string"}, "impact": {"type": "string"}, "mitigation": {"type": "string"}}, "additionalProperties": false}},
+    "pm_decisions_required": {"type": "array", "items": {"type": "string"}},
+    "bet_draft": {"type": "object", "required": ["hypothesis", "success_signal", "window", "kill_condition", "fastest_test"], "properties": {"hypothesis": {"type": "string"}, "success_signal": {"type": "string"}, "window": {"type": "string"}, "kill_condition": {"type": "string"}, "fastest_test": {"type": "string"}}, "additionalProperties": false},
+    "prototype_recommendation": {"type": "object", "required": ["recommended", "scope", "reason"], "properties": {"recommended": {"type": "boolean"}, "scope": {"type": "string"}, "reason": {"type": "string"}}, "additionalProperties": false},
+    "handoff_summary": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

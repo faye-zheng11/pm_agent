@@ -1,0 +1,10 @@
+name: "新项目"
+status: discovery
+owner: ""
+created_at: ""
+updated_at: ""
+workflow: pm-idea-to-delivery
+project_context: PROJECT-CONTEXT.md
+project_brain: project.yaml
+agent_config: agent-config.json
+version: v0.1

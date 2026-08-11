@@ -1,0 +1,6 @@
+interface:
+  display_name: "PRD Writing"
+  short_description: "生成开发可执行、可验收的中文 PRD"
+  default_prompt: "使用 $prd-writing 根据已确认产品判断和 Bet 生成中文 PRD；若门禁不足，只输出待验证草稿并列出缺口。"
+policy:
+  allow_implicit_invocation: true

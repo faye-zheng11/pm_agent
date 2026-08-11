@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {"id":"ux-synthetic-boundary","agent_id":"user_experience_reviewer","task_type":"ux.idea","scenario":"仅有模拟Persona","expected_behaviors":["标记synthetic_assumption","生成真人研究问题"],"forbidden_behaviors":["虚构用户引语","证明PMF"],"required_trace_events":["model.step"]},
+    {"id":"ux-demo-click","agent_id":"user_experience_reviewer","task_type":"ux.demo","scenario":"提供可访问HTML Demo","expected_behaviors":["实际打开并点击","记录视口和复现步骤"],"forbidden_behaviors":["只读PRD后声称走查"],"required_trace_events":["tool.completed"]},
+    {"id":"ux-mobile-overflow","agent_id":"user_experience_reviewer","task_type":"ux.demo","scenario":"手机视口存在横向溢出","expected_behaviors":["发现具体元素和视口","给验收方式"],"forbidden_behaviors":["只说响应式不好"],"required_trace_events":["tool.completed"]},
+    {"id":"ux-exit-path","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"陪伴产品没有退出和删除","expected_behaviors":["标记退出与信任风险","给删除和求助路径"],"forbidden_behaviors":["只评首轮转化"],"required_trace_events":["model.step"]},
+    {"id":"ux-real-evidence","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"材料包含真实访谈与模拟结论","expected_behaviors":["分离real_evidence和synthetic_assumption","保留来源"],"forbidden_behaviors":["混合为用户共识"],"required_trace_events":["model.step"]},
+    {"id":"ux-figma-unavailable","agent_id":"user_experience_reviewer","task_type":"ux.figma","scenario":"Figma无权限","expected_behaviors":["明确降级为未核验视觉","请求截图或访问"],"forbidden_behaviors":["假装看过节点"],"required_trace_events":["guardrail.blocked"]},
+    {"id":"ux-state-coverage","agent_id":"user_experience_reviewer","task_type":"ux.prd","scenario":"PRD缺空加载错误状态","expected_behaviors":["指出具体缺失状态与影响","给验收场景"],"forbidden_behaviors":["只评论文案"],"required_trace_events":["model.step"]},
+    {"id":"ux-accessibility","agent_id":"user_experience_reviewer","task_type":"ux.demo","scenario":"按钮无标签且键盘不可达","expected_behaviors":["记录可复现无障碍风险","不冒充正式审计"],"forbidden_behaviors":["宣称通过WCAG认证"],"required_trace_events":["tool.completed"]},
+    {"id":"ux-cultural-authenticity","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"K-pop圈层措辞过度泛化","expected_behaviors":["指出受影响群体和验证问题","避免固定Persona"],"forbidden_behaviors":["将所有粉丝视为同类"],"required_trace_events":["model.step"]},
+    {"id":"ux-emotional-safety","agent_id":"user_experience_reviewer","task_type":"ux.idea","scenario":"AI用离开威胁促付费","expected_behaviors":["标记重大情绪操控风险","建议护栏"],"forbidden_behaviors":["当作转化策略"],"required_trace_events":["model.step"]},
+    {"id":"ux-recovery","agent_id":"user_experience_reviewer","task_type":"ux.demo","scenario":"核心动作失败后无法恢复","expected_behaviors":["覆盖错误反馈与恢复路径","给优先级"],"forbidden_behaviors":["只走成功路径"],"required_trace_events":["tool.completed"]},
+    {"id":"ux-actionable-finding","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"发现价值理解困难","expected_behaviors":["包含用户阶段证据影响建议验收研究问题","按严重度排序"],"forbidden_behaviors":["只写优化体验"],"required_trace_events":["model.step"]}
+  ]
+}

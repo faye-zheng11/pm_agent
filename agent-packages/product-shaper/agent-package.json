@@ -1,0 +1,81 @@
+{
+  "schema_version": "2.0",
+  "id": "product-shaper",
+  "runtime_agent_id": "product_shaper",
+  "name": "做产品",
+  "version": "2.0.0",
+  "mission": "通过追问把模糊机会塑造成可讨论、可验证、可交付的完整产品方案。",
+  "modes": [
+    {"id": "new_product", "task_type": "product.shape", "label": "从想法做新产品", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 2}},
+    {"id": "existing_feature", "task_type": "product.feature", "label": "为现有产品做功能", "project_required": true, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 2}},
+    {"id": "prd_delivery", "task_type": "product.prd", "label": "生成正式 PRD", "project_required": true, "approval_required": true, "budget": {"max_model_steps": 12, "max_tool_calls": 6, "max_handoffs": 2}},
+    {"id": "design_brief", "task_type": "product.design", "label": "生成设计任务", "project_required": true, "approval_required": true, "budget": {"max_model_steps": 10, "max_tool_calls": 5, "max_handoffs": 2}},
+    {"id": "concept_demo", "task_type": "prototype.concept", "label": "生成概念 Demo", "project_required": true, "approval_required": true, "budget": {"max_model_steps": 12, "max_tool_calls": 6, "max_handoffs": 2}}
+  ],
+  "inputs": [
+    {"id": "idea", "label": "你的想法、机会或已确认方案", "type": "textarea", "required": true},
+    {"id": "known_users", "label": "你认为是给谁用", "type": "text", "required": false},
+    {"id": "decision", "label": "这次要决定或交付什么", "type": "textarea", "required": true},
+    {"id": "constraints", "label": "时间、成本与业务限制", "type": "textarea", "required": false},
+    {"id": "evidence", "label": "已有证据与材料", "type": "files", "required": false}
+  ],
+  "outputs": ["完整产品方案", "PMF Bet", "MVP 与页面流程", "PRD / 设计任务", "可选概念 Demo"],
+  "protocols": [
+    "agent-packages/product-shaper/skills/product-shaper/SKILL.md",
+    "agent-packages/product-shaper/skills/product-shaper/references/operating-protocol.md"
+  ],
+  "domain_knowledge": [
+    "agent-packages/product-shaper/skills/product-shaper/references/domain-playbook.md",
+    "runtime/references/kpop-ai-companion.md",
+    "runtime/references/stage-gating.md"
+  ],
+  "core_skills": ["pmf-bet-brief", "prd-writing"],
+  "tools": ["project_memory", "artifact_store", "demo_builder", "demo_html", "data_gateway", "design_connector"],
+  "output_schema": "schemas/product-shaper-result.schema.json",
+  "ui": {"accent": "#2563a7", "start_label": "把想法做成产品", "result_sections": ["产品判断", "用户与任务", "MVP 与流程", "Bet 与风险", "交付产物"]},
+  "runtime": {
+    "id": "product_shaper",
+    "name": "Product Shaper · 做产品",
+    "mission": "从问题和证据开始，通过追问形成产品机制、MVP、信息架构、流程、Bet，并在 PM 门禁后完成 PRD、设计任务与概念 Demo。",
+    "lifecycle_status": "core",
+    "accepted_task_types": ["product.shape", "product.feature", "product.prd", "product.design", "prototype.concept"],
+    "required_context": ["idea_or_opportunity", "decision_to_support"],
+    "skills": [
+      "agent-packages/product-shaper/skills/product-shaper/SKILL.md",
+      "agent-packages/product-shaper/skills/product-shaper/references/operating-protocol.md",
+      "skills/pmf-bet-brief/SKILL.md",
+      "skills/prd-writing/SKILL.md"
+    ],
+    "knowledge_assets": [
+      "agent-packages/product-shaper/skills/product-shaper/references/domain-playbook.md",
+      "runtime/references/kpop-ai-companion.md",
+      "runtime/references/stage-gating.md"
+    ],
+    "allowed_tools": ["project_memory", "artifact_store", "demo_builder", "demo_html", "data_gateway", "design_connector"],
+    "output_schema": "schemas/product-shaper-result.schema.json",
+    "authority": {
+      "can": ["追问与塑形", "生成可证伪 Bet", "规划 MVP、IA、流程与状态", "在门禁后生成 PRD、设计任务和概念 Demo"],
+      "cannot": ["把假设写成事实", "无 Bet 生成已批准 PRD", "无 PM 审批进入交付", "把概念 Demo 冒充生产实现"]
+    },
+    "reviewer": "independent_critic",
+    "stop_conditions": ["用户、问题与情境均无法澄清", "高风险主题缺少安全边界", "交付模式缺少有效 PM 审批"],
+    "retry_policy": {"max_attempts": 2, "backoff_seconds": 8}
+  },
+  "capability": {
+    "maturity": "L3",
+    "autonomy_budget": {"max_model_steps": 14, "max_tool_calls": 10, "max_handoffs": 2},
+    "operating_loop": ["inspect", "clarify", "plan", "act", "observe", "verify", "handoff", "stop"],
+    "input_requirements": [{"id": "shaping_brief", "description": "想法或机会、目标用户线索、证据、约束和要支持的决定", "required": true, "elicitation": "structured_form"}],
+    "verification_checks": [
+      {"id": "problem_before_solution", "description": "先明确用户、情境、任务、困境和替代", "required": true},
+      {"id": "product_completeness", "description": "机制、MVP、非目标、IA、流程和状态完整", "required": true},
+      {"id": "evidence_boundary", "description": "事实、假设、缺口和 PM 决策分开", "required": true},
+      {"id": "falsifiable_bet", "description": "Bet 有实验、口径、观察窗、样本和 Kill Condition", "required": true},
+      {"id": "delivery_gate", "description": "PRD、设计和 Demo 均核验 PM 门禁与来源方案", "required": true},
+      {"id": "artifact_readback", "description": "生成产物已回读并与方案保持一致", "required": true}
+    ],
+    "external_outputs": [{"tool": "design_connector", "status": "optional", "requires_target": true, "requires_approval": true, "verification": "回读设计结构与截图；不可用时返回设计任务而非假装写入"}],
+    "failure_policy": {"on_missing_input": "request_input", "on_tool_error": "retry_then_mark_unverified", "on_verification_failure": "revise"}
+  },
+  "eval_file": "evals/cases.json"
+}

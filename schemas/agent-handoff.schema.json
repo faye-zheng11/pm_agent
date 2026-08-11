@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PM Workbench Agent Handoff",
+  "type": "object",
+  "required": ["to_agent", "task_type", "goal", "source_artifacts", "blocking", "reason"],
+  "properties": {
+    "to_agent": {"type": "string"},
+    "task_type": {"type": "string"},
+    "goal": {"type": "string"},
+    "source_artifacts": {"type": "array", "items": {"type": "string"}},
+    "blocking": {"type": "boolean"},
+    "reason": {"type": "string"}
+  },
+  "additionalProperties": false
+}

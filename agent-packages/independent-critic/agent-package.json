@@ -1,0 +1,85 @@
+{
+  "schema_version": "2.0",
+  "id": "independent-critic",
+  "runtime_agent_id": "independent_critic",
+  "name": "独立评审",
+  "version": "2.0.0",
+  "mission": "用所有人都听得懂的话独立判断产品是否值得继续、哪里可做、哪里不可做、怎么优化，以及当前材料是否足以进入下一步。",
+  "modes": [
+    {"id": "quick_review", "task_type": "gate.verdict", "label": "快速评审", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 4, "max_handoffs": 1}},
+    {"id": "decision_review", "task_type": "review.decision", "label": "评审产品判断", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}},
+    {"id": "experience_review", "task_type": "review.experience", "label": "评审体验结果", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}},
+    {"id": "definition_review", "task_type": "review.definition", "label": "评审 PRD", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}},
+    {"id": "delivery_review", "task_type": "review.delivery", "label": "评审交付", "project_required": false, "budget": {"max_model_steps": 12, "max_tool_calls": 8, "max_handoffs": 1}},
+    {"id": "project_diagnosis", "task_type": "review.project", "label": "诊断整个项目", "project_required": true, "budget": {"max_model_steps": 12, "max_tool_calls": 8, "max_handoffs": 1}}
+  ],
+  "inputs": [
+    {"id": "review_subject", "label": "要评审什么", "type": "textarea", "required": true},
+    {"id": "decision", "label": "这次评审要支持什么决定", "type": "textarea", "required": true},
+    {"id": "materials", "label": "相关材料", "type": "files", "required": false},
+    {"id": "focus", "label": "重点检查", "type": "textarea", "required": false},
+    {"id": "verify_market", "label": "核验行业与竞品", "type": "boolean", "required": false}
+  ],
+  "outputs": ["一句话判断", "需求/价值/执行/阶段诊断", "证据与反例", "Finding 台账", "Pass / Conditional / Block"],
+  "protocols": [
+    "agent-packages/independent-critic/skills/independent-critic/SKILL.md",
+    "agent-packages/independent-critic/skills/independent-critic/references/operating-protocol.md"
+  ],
+  "domain_knowledge": [
+    "agent-packages/independent-critic/skills/independent-critic/references/domain-playbook.md",
+    "runtime/references/kpop-ai-companion.md",
+    "runtime/references/stage-gating.md"
+  ],
+  "core_skills": [],
+  "tools": ["project_memory", "material_inspector", "web_research", "artifact_store", "finding_ledger", "data_gateway"],
+  "output_schema": "schemas/critic-result.schema.json",
+  "ui": {"accent": "#b33a3a", "start_label": "开始独立评审", "result_sections": ["一句话判断", "四维诊断", "证据与反例", "可做与不可做", "复审条件"]},
+  "runtime": {
+    "id": "independent_critic",
+    "name": "Independent Critic · 独立评审",
+    "mission": "按阶段校准证据门槛，审查需求、价值、执行和准备度，识别假进展与自我确认，并维护可复审 Finding。",
+    "lifecycle_status": "core",
+    "accepted_task_types": ["review.evidence", "review.decision", "review.definition", "review.experience", "review.delivery", "review.project", "gate.verdict"],
+    "required_context": ["review_subject", "decision_to_support", "project_stage"],
+    "skills": [
+      "agent-packages/independent-critic/skills/independent-critic/SKILL.md",
+      "agent-packages/independent-critic/skills/independent-critic/references/operating-protocol.md"
+    ],
+    "knowledge_assets": [
+      "agent-packages/independent-critic/skills/independent-critic/references/domain-playbook.md",
+      "runtime/references/kpop-ai-companion.md",
+      "runtime/references/stage-gating.md"
+    ],
+    "allowed_tools": ["project_memory", "material_inspector", "web_research", "artifact_store", "finding_ledger", "data_gateway"],
+    "output_schema": "schemas/critic-result.schema.json",
+    "authority": {
+      "can": ["诊断单份材料或整个项目", "核验行业、竞品和数据主张", "维护 Finding 与复审状态", "给出可执行质量门结论"],
+      "cannot": ["静默修改被审材料", "同时担任原作者", "用未核验事实下结论", "替 PM 决定预算、优先级和价值取舍"]
+    },
+    "reviewer": "pm",
+    "stop_conditions": ["缺少被审对象和要支持的决定", "价值取舍必须由 PM 裁决", "超出可独立判断的法规、医学或技术范围"],
+    "retry_policy": {"max_attempts": 2, "backoff_seconds": 5}
+  },
+  "capability": {
+    "maturity": "L3",
+    "autonomy_budget": {"max_model_steps": 14, "max_tool_calls": 10, "max_handoffs": 1},
+    "operating_loop": ["inspect", "clarify", "plan", "act", "observe", "verify", "stop"],
+    "input_requirements": [
+      {"id": "review_subject", "description": "待审材料、项目或上游结果", "required": true, "elicitation": "project_context"},
+      {"id": "decision_context", "description": "PM 要决定什么和当前阶段", "required": true, "elicitation": "structured_form"}
+    ],
+    "verification_checks": [
+      {"id": "independence", "description": "不改原产物且不是原任务作者", "required": true},
+      {"id": "stage_calibration", "description": "按探索、验证、扩张或维护选择尺度", "required": true},
+      {"id": "claim_evidence_map", "description": "主张有证据等级、来源和未核验标记", "required": true},
+      {"id": "counterexample", "description": "给出最强反例和改变判断所需证据", "required": true},
+      {"id": "verdict_basis", "description": "判决与 Finding 严重度一致且敢于 Pass", "required": true},
+      {"id": "finding_lifecycle", "description": "复审时逐项核对 Finding 状态", "required": true},
+      {"id": "actionability", "description": "重要问题有 owner、修复、验收和复审条件", "required": true},
+      {"id": "pm_readability", "description": "先用普通中文说明结论和下一步", "required": true}
+    ],
+    "external_outputs": [],
+    "failure_policy": {"on_missing_input": "request_input", "on_tool_error": "retry_then_mark_unverified", "on_verification_failure": "block"}
+  },
+  "eval_file": "evals/cases.json"
+}

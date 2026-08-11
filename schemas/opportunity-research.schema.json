@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Opportunity Research",
+  "type": "object",
+  "required": ["mode", "opportunity_level", "topic", "target_audience", "signals", "no_signal_reason", "duplicates", "unavailable_sources", "sample_biases", "handoff_summary", "ledger_updates"],
+  "properties": {
+    "mode": {"enum": ["casual_scan", "new_project", "current_product"]},
+    "opportunity_level": {"enum": ["project", "feature"]},
+    "topic": {"type": "string", "minLength": 1},
+    "target_audience": {"type": "string", "minLength": 1},
+    "signals": {"type": "array", "maxItems": 5, "items": {"type": "object", "required": ["id", "title", "classification", "evidence_grade", "source_type", "url", "accessed_at", "source_summary", "user_behavior", "current_alternative", "why_it_matters", "testable_opportunity", "score", "limitations"], "properties": {
+      "id": {"type": "string"}, "title": {"type": "string"}, "classification": {"enum": ["fact", "inference", "insufficient"]}, "evidence_grade": {"enum": ["A", "B", "C"]}, "source_type": {"enum": ["official", "community", "app_store", "social", "media", "research", "other"]}, "url": {"type": "string"}, "accessed_at": {"type": "string"}, "source_summary": {"type": "string"}, "user_behavior": {"type": "string"}, "current_alternative": {"type": "string"}, "why_it_matters": {"type": "string"}, "testable_opportunity": {"type": "string"}, "score": {"type": "integer", "minimum": 0, "maximum": 8}, "limitations": {"type": "array", "items": {"type": "string"}}
+    }, "additionalProperties": false}},
+    "no_signal_reason": {"type": "string"},
+    "duplicates": {"type": "array", "items": {"type": "string"}},
+    "unavailable_sources": {"type": "array", "items": {"type": "string"}},
+    "sample_biases": {"type": "array", "items": {"type": "string"}},
+    "handoff_summary": {"type": "string", "minLength": 1},
+    "ledger_updates": {"type": "array", "items": {"type": "object", "required": ["signal_id", "action", "status"], "properties": {"signal_id": {"type": "string"}, "action": {"enum": ["new", "update", "expire", "convert"]}, "status": {"enum": ["watching", "candidate", "converted", "expired", "rejected"]}}, "additionalProperties": false}}
+  },
+  "additionalProperties": false
+}

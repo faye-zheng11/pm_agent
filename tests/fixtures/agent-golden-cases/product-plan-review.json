@@ -1,0 +1,10 @@
+{
+  "id": "product-plan-review",
+  "project_type": "consumer_product",
+  "stage": "discovery",
+  "request": "评审一个已经写好的产品方案，判断需求是否成立、方案哪里需要收窄。",
+  "expected_workflow": "pm-idea-to-delivery",
+  "expected_agents": ["product_shaper", "user_experience_reviewer", "independent_critic"],
+  "forbidden_agents": [],
+  "expected_gates": ["区分事实、假设和证据缺口", "模拟用户不冒充真实用户证据", "结论必须给出继续、收窄或暂停理由"]
+}

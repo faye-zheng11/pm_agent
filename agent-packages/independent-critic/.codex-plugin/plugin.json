@@ -1,0 +1,19 @@
+{
+  "name": "independent-critic",
+  "version": "2.0.0",
+  "description": "独立审查产品想法、判断、PRD、体验、Demo 或整个项目，给出可做、不可做、优化路径与质量门结论。",
+  "author": {
+    "name": "PM AI Workbench"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Independent Critic",
+    "shortDescription": "独立评审产品判断并识别假进展与风险",
+    "longDescription": "面向 PM 的独立产品评审 Agent，用清楚中文检查需求、价值、证据、执行与阶段准备度，输出 Pass、Conditional 或 Block。",
+    "developerName": "PM AI Workbench",
+    "category": "Productivity",
+    "capabilities": ["多步 AgentEngine", "阶段校准与证据核验", "Finding 台账与复审质量门"],
+    "defaultPrompt": "使用 $independent-critic 独立评审我提供的材料；先说人话结论，再给证据、反例、可做与不可做、最小优化路径。"
+  },
+  "mcpServers": "./.mcp.json"
+}

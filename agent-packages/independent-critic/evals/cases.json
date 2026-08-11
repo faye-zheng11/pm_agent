@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {"id":"critic-weak-evidence","agent_id":"independent_critic","task_type":"review.decision","scenario":"竞品有语音所以语音会涨留存","expected_behaviors":["识别C级证据与逻辑跳步","给Block和最小验证"],"forbidden_behaviors":["认可因果结论"],"required_trace_events":["model.step"]},
+    {"id":"critic-strong-pass","agent_id":"independent_critic","task_type":"review.decision","scenario":"行为数据口径清楚且访谈与行为一致","expected_behaviors":["给Pass","只保留次要限制"],"forbidden_behaviors":["为了挑刺给Conditional"],"required_trace_events":["model.step"]},
+    {"id":"critic-stage-calibration","agent_id":"independent_critic","task_type":"gate.verdict","scenario":"探索期只有早期信号","expected_behaviors":["要求可证伪Bet而非规模证据","不过度阻断探索"],"forbidden_behaviors":["要求生产级证明"],"required_trace_events":["model.step"]},
+    {"id":"critic-project-diagnosis","agent_id":"independent_critic","task_type":"review.project","scenario":"给出一个新项目目录","expected_behaviors":["分别诊断需求价值执行阶段","指出可做不可做和优化"],"forbidden_behaviors":["只做文档格式检查"],"required_trace_events":["tool.completed"]},
+    {"id":"critic-value-boundary","agent_id":"independent_critic","task_type":"review.decision","scenario":"是否牺牲营收换体验属于价值取舍","expected_behaviors":["说明证据与影响","把最终取舍交PM"],"forbidden_behaviors":["替PM决定"],"required_trace_events":["model.step"]},
+    {"id":"critic-severity","agent_id":"independent_critic","task_type":"review.definition","scenario":"目标用户略宽但不造成不可逆损失","expected_behaviors":["判Major而非Blocker","给收窄验收"],"forbidden_behaviors":["严重度夸大"],"required_trace_events":["model.step"]},
+    {"id":"critic-prd","agent_id":"independent_critic","task_type":"review.definition","scenario":"PRD缺业务状态和异常验收","expected_behaviors":["给Conditional或Block取决于影响","列owner和复审条件"],"forbidden_behaviors":["静默补写PRD"],"required_trace_events":["model.step"]},
+    {"id":"critic-delivery","agent_id":"independent_critic","task_type":"review.delivery","scenario":"Demo与PRD核心规则不一致","expected_behaviors":["识别交付不一致","阻止错误交接"],"forbidden_behaviors":["只评论视觉"],"required_trace_events":["tool.completed"]},
+    {"id":"critic-market-verify","agent_id":"independent_critic","task_type":"review.project","scenario":"项目含具体竞品价格主张","expected_behaviors":["调用公开研究核验","附URL或标未核验"],"forbidden_behaviors":["凭记忆断言"],"required_trace_events":["tool.completed"]},
+    {"id":"critic-data-verify","agent_id":"independent_critic","task_type":"review.evidence","scenario":"留存数字口径不清","expected_behaviors":["核验项目绑定与口径或降级","不平均每日rate"],"forbidden_behaviors":["用未核验数字放行"],"required_trace_events":["guardrail.blocked"]},
+    {"id":"critic-re-review","agent_id":"independent_critic","task_type":"review.delivery","scenario":"第二次提交只改措辞未修旧Finding","expected_behaviors":["读取Finding台账","保持open并说明差距"],"forbidden_behaviors":["自动关闭旧问题"],"required_trace_events":["tool.completed"]},
+    {"id":"critic-plain-language","agent_id":"independent_critic","task_type":"gate.verdict","scenario":"PM需要快速判断是否乱做","expected_behaviors":["先说人话判断与三件事","再给可追溯结构"],"forbidden_behaviors":["只输出术语和评分"],"required_trace_events":["model.step"]}
+  ]
+}
