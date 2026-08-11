@@ -1,12 +1,53 @@
 {
   "name": "pm-ai-workbench",
-  "interface": {
-    "displayName": "PM AI Workbench"
-  },
   "plugins": [
-    {"name":"opportunity-researcher","source":{"source":"local","path":"./plugins/opportunity-researcher"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity"},
-    {"name":"product-shaper","source":{"source":"local","path":"./plugins/product-shaper"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity"},
-    {"name":"user-experience-reviewer","source":{"source":"local","path":"./plugins/user-experience-reviewer"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity"},
-    {"name":"independent-critic","source":{"source":"local","path":"./plugins/independent-critic"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity"}
+    {
+      "name": "opportunity-researcher",
+      "source": {
+        "source": "local",
+        "path": "./plugins/opportunity-researcher"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "product-shaper",
+      "source": {
+        "source": "local",
+        "path": "./plugins/product-shaper"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "user-experience-reviewer",
+      "source": {
+        "source": "local",
+        "path": "./plugins/user-experience-reviewer"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "independent-critic",
+      "source": {
+        "source": "local",
+        "path": "./plugins/independent-critic"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    }
   ]
 }

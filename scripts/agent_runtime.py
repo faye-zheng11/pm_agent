@@ -2859,7 +2859,7 @@ class AgentWorker:
             "browser_review": {"arguments": {"target": "已授权 HTML 路径或 URL", "viewports": ["desktop", "mobile"], "click_selectors": ["CSS selector"]}},
             "demo_html": {"arguments": {"spec": "产品规格或产品想法；生成自包含移动 HTML Demo"}, "note": "必须标记为概念验证，不连接生产数据库。"},
             "persona_review": {"arguments": {"target": "已授权 HTML 路径", "persona": "唯粉|团粉|妈粉|事业粉|CP粉|颜粉|teen|海外粉"}, "note": "Synthetic 反应不能当真人证据。"},
-            "finding_ledger": {"actions": ["list", "upsert", "transition"], "note": "只维护当前项目 Finding，复审不得静默关闭旧问题。"},
+            "finding_ledger": {"actions": ["list", "upsert", "transition"], "upsert_arguments": {"finding": "必须包含 id、review_subject、severity、issue、status=open|fixed|accepted_risk|obsolete"}, "transition_arguments": {"finding_id": "已有 Finding ID", "status": "fixed|accepted_risk|obsolete"}, "note": "只维护当前项目 Finding，复审不得静默关闭旧问题；没有 Finding ID 不得 transition。"},
             "artifact_store": {"action": "write_draft", "arguments": {"filename": "md|json|txt", "content": "草稿内容"}},
             "demo_builder": {"action": "build", "arguments": {"title": "标题", "tagline": "说明", "screens": "[{name,purpose,actions[]}]"}},
         }
@@ -2890,7 +2890,7 @@ class AgentWorker:
                 "writeback_candidates 每项：classification, destination, content, requires_pm_approval；"
                 "classification 只能是 canon|assumption|evidence|decision|feature|briefing，"
                 "canon/decision 必须 requires_pm_approval=true；没有完整合规候选就返回空数组，不得输出半成品对象。\n"
-                "verification：status, summary, checks[]；每个 check：id, status, evidence。\n"
+                "verification：status 必须为 passed（它表示本次执行契约完成，不等于产品通过），summary, checks[]；每个 check：id, status, evidence。\n"
                 "trace：skills[], tools[], source_artifacts[]；tools 只能填写实际调用过的工具 ID，不要填写带参数或说明的句子。\n"
                 "critic_review 必须包含：\n"
                 "- review_mode 必须按 task_type 精确映射：review.evidence=evidence_review，"
@@ -3003,6 +3003,67 @@ class AgentWorker:
             "messages": self._compact_checkpoint_messages(messages),
             "saved_at": utc_now(),
         })
+
+    def _finalize_after_budget(
+        self,
+        task_id: str,
+        worker_id: str,
+        system: str,
+        messages: list[dict[str, str]],
+        max_steps: int,
+    ) -> dict[str, Any]:
+        """预算用尽时先给模型一次收尾机会，失败则提交可追踪的阶段性阻断结果。"""
+        task = self.runtime.store.get(task_id)
+        self.runtime.store.record_event(task_id, "task.budget_exhausted", worker_id, {"max_model_steps": max_steps})
+        final_messages = [
+            *messages[-8:],
+            {
+                "role": "user",
+                "content": (
+                    "【预算收尾】你已达到本次 Agent 的模型步骤上限。现在只能提交一个 final Action，不能再调用工具、不能再追问。"
+                    "保留已经得到的事实和工具观察，把未完成部分标为未核验；若无法满足 completed 的验证契约，提交 status=blocked 的阶段性结果。"
+                ),
+            },
+        ]
+        try:
+            raw = self.model_client(system, final_messages, 4500)
+            action = parse_model_action(raw)
+            if action["kind"] == "final":
+                current = self.runtime.store.get(task_id)
+                result = validate_result(action["result"], current)
+                if result["status"] == "completed":
+                    validate_result_against_capability(result, self.runtime.registry.capabilities[current["assigned_agent"]])
+                    self.runtime.store.record_event(task_id, "task.budget_finalized", worker_id, {"status": "completed"})
+                    return self.runtime.store.transition(task_id, "completed", worker_id, result=result)
+                if result["status"] == "blocked":
+                    self.runtime.store.record_event(task_id, "task.budget_finalized", worker_id, {"status": "blocked"})
+                    return self.runtime.store.transition(task_id, "blocked", worker_id, result=result, reason=result["summary"])
+        except Exception as exc:
+            self.runtime.store.record_event(task_id, "task.budget_finalize_failed", worker_id, {"reason": str(exc)[:500]})
+
+        excerpts = [str(item.get("content") or "").strip() for item in messages[-4:] if str(item.get("content") or "").strip()]
+        used_tools = list(dict.fromkeys(
+            str(item.get("details", {}).get("tool") or "")
+            for item in self.runtime.store.events(task_id)
+            if item.get("kind") == "tool.completed" and item.get("details", {}).get("tool")
+        ))
+        excerpt = "\n".join(excerpts)[-3000:]
+        result = {
+            "schema_version": "1.0",
+            "task_id": task_id,
+            "agent_id": task["assigned_agent"],
+            "status": "blocked",
+            "summary": f"已达到模型步骤上限 {max_steps}，提交阶段性结果；未完成部分不得视为已验证。\n{excerpt}",
+            "conclusions": [{"statement": "本次执行未能在预算内完成全部验证。", "classification": "unverified", "confidence": "low", "evidence_refs": []}],
+            "artifacts": [],
+            "open_questions": ["需要补跑未完成的研究、核验或交接步骤。"],
+            "recommended_handoffs": [],
+            "writeback_candidates": [],
+            "verification": {"status": "not_applicable", "summary": "阶段性阻断，不宣称验证完成。", "checks": []},
+            "trace": {"skills": [], "tools": used_tools, "source_artifacts": task.get("source_artifacts") or []},
+        }
+        self.runtime.store.record_event(task_id, "task.budget_fallback_blocked", worker_id, {"status": "blocked"})
+        return self.runtime.store.transition(task_id, "blocked", worker_id, result=result, reason=result["summary"])
 
     def run(self, task_id: str, worker_id: str = "model-worker") -> dict[str, Any]:
         task = self.runtime.store.claim(task_id, worker_id, lease_seconds=300)
@@ -3151,7 +3212,7 @@ class AgentWorker:
                         },
                     )
                     if step >= max_steps:
-                        raise
+                        return self._finalize_after_budget(task_id, worker_id, system, messages, max_steps)
                     messages.extend([
                         {"role": "assistant", "content": json.dumps(action, ensure_ascii=False)[:30000]},
                         {
@@ -3179,7 +3240,7 @@ class AgentWorker:
                 if result["status"] == "needs_input":
                     raise ContractError("needs_input 必须使用 request_input Action 提交结构化问题")
                 return self.runtime.store.fail_attempt(task_id, worker_id, result["summary"], result=result)
-            raise ContractError(f"Agent 超过最大步骤数 {max_steps}，仍未返回 final")
+            return self._finalize_after_budget(task_id, worker_id, system, messages, max_steps)
         except Exception as exc:
             current = self.runtime.store.get(task_id)
             if current["status"] == "running":

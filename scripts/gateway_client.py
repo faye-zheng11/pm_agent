@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -293,32 +294,35 @@ def chat_completion(
     }
     endpoint = base_url.rstrip("/") + "/v1/chat/completions"
     fixed_gateway = "aigateway-infra.oppaya.app" in endpoint
-    with _gateway_process_lock():
-        if stream:
-            raw_body = post_stream(
-                endpoint,
-                payload,
-                headers={"Authorization": "Bearer " + token},
-                timeout_seconds=timeout_seconds,
-                insecure=fixed_gateway and allow_fixed_gateway_tls_exception,
-            )
-            content = _stream_content(raw_body)
-        else:
-            value = post_json(
-                endpoint,
-                payload,
-                headers={"Authorization": "Bearer " + token},
-                timeout_seconds=timeout_seconds,
-                insecure=fixed_gateway and allow_fixed_gateway_tls_exception,
-            )
-            try:
-                value = dict(value)
-            except (TypeError, ValueError) as exc:
-                raise GatewayError("AI 网关返回格式无效", category="gateway_protocol") from exc
-            choices = value.get("choices") or []
-            content = ((choices[0].get("message") or {}).get("content") if choices else None)
-            if isinstance(content, list):
-                content = "".join(str(item.get("text") or "") for item in content if isinstance(item, dict))
-    if not isinstance(content, str) or not content.strip():
-        raise GatewayError("AI 网关返回了空内容", category="gateway_protocol")
-    return content
+    for attempt in range(2):
+        with _gateway_process_lock():
+            if stream:
+                raw_body = post_stream(
+                    endpoint,
+                    payload,
+                    headers={"Authorization": "Bearer " + token},
+                    timeout_seconds=timeout_seconds,
+                    insecure=fixed_gateway and allow_fixed_gateway_tls_exception,
+                )
+                content = _stream_content(raw_body)
+            else:
+                value = post_json(
+                    endpoint,
+                    payload,
+                    headers={"Authorization": "Bearer " + token},
+                    timeout_seconds=timeout_seconds,
+                    insecure=fixed_gateway and allow_fixed_gateway_tls_exception,
+                )
+                try:
+                    value = dict(value)
+                except (TypeError, ValueError) as exc:
+                    raise GatewayError("AI 网关返回格式无效", category="gateway_protocol") from exc
+                choices = value.get("choices") or []
+                content = ((choices[0].get("message") or {}).get("content") if choices else None)
+                if isinstance(content, list):
+                    content = "".join(str(item.get("text") or "") for item in content if isinstance(item, dict))
+        if isinstance(content, str) and content.strip():
+            return content
+        if attempt == 0:
+            time.sleep(0.8)
+    raise GatewayError("AI 网关返回了空内容（已自动重试 1 次）", category="gateway_protocol")
