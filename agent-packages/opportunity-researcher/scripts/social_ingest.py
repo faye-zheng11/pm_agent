@@ -3,13 +3,14 @@
 社媒帖子采集 → 归一 → 喂 opportunity-researcher。采集与 agent 解耦。
 用法：
   python3 social_ingest.py reddit "kpop parasocial" --limit 8
+  python3 social_ingest.py xhs-live "痛包" --limit 15   # 真·live 抓小红书(需先运行 xhs-login.command 扫码登录)
   python3 social_ingest.py mediacrawler <导出.json>
   python3 social_ingest.py x <twscrape导出.json>
   python3 social_ingest.py manual
 不带 --project 时把归一后的 JSON 打到 stdout（供引擎读取）；带 --project 落盘去重。
 Token：读 PM_WORKBENCH_API_KEY 或 ~/.config/pm-workbench/tavily-api-key。
 """
-import sys, os, json, ssl, hashlib, datetime, urllib.request
+import sys, os, json, ssl, hashlib, datetime, urllib.request, subprocess, shutil, pathlib
 
 def _tavily_key():
     for env in ("TAVILY_API_KEY",):
@@ -70,6 +71,42 @@ def source_mediacrawler(path):
                  "comments": p.get("comment_count"), "shares": p.get("share_count")}, "mediacrawler-note"))
     return out
 
+def _mediacrawler_dir():
+    return pathlib.Path(__file__).resolve().parents[3] / "runtime" / "vendor" / "MediaCrawler"
+
+def source_xhs_live(keyword, limit=15, timeout=220):
+    """真·live 抓小红书：用已登录会话(xhs_user_data_dir)按关键词搜笔记+一级评论。
+    仅个人研究用途、遵守平台规则、账号风险自负。会话失效时抛 xhs_login_required。"""
+    mc = _mediacrawler_dir()
+    uv = shutil.which("uv") or os.path.expanduser("~/.local/bin/uv")
+    if not mc.is_dir() or not (mc / ".venv").is_dir() or not os.path.exists(uv):
+        raise SystemExit("xhs_not_installed：未安装小红书抓取器，先运行 xhs-login.command")
+    outdir = mc / "data" / "_live_tmp"
+    shutil.rmtree(outdir, ignore_errors=True); outdir.mkdir(parents=True, exist_ok=True)
+    limit = min(max(int(limit), 1), 20)
+    cmd = [uv, "run", "python", "main.py", "--platform", "xhs", "--lt", "qrcode",
+           "--type", "search", "--keywords", keyword, "--save_data_option", "json",
+           "--save_data_path", str(outdir), "--crawler_max_notes_count", str(limit),
+           "--get_comment", "yes", "--get_sub_comment", "no", "--headless", "yes"]
+    try:
+        proc = subprocess.run(cmd, cwd=str(mc), capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise SystemExit("xhs_login_required：抓取超时（多半是会话失效/反爬），请运行 xhs-login.command 重新扫码")
+    blob = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    posts = []
+    for jf in sorted(outdir.rglob("*.json")):
+        try:
+            posts += source_mediacrawler(str(jf))
+        except Exception:
+            continue
+    if not posts:
+        low = blob.lower()
+        if any(k in blob for k in ("扫码", "二维码", "重新登录", "登录失效", "未登录")) or \
+           any(k in low for k in ("login", "qrcode", "scan", "relogin", "not login")):
+            raise SystemExit("xhs_login_required：小红书会话失效，请运行 xhs-login.command 扫码登录后重试")
+        raise SystemExit("xhs_no_result：本次未抓到内容（关键词无结果或被风控）：" + blob.strip()[-400:])
+    return posts
+
 def source_x(path):
     rows = json.load(open(path, encoding="utf-8"))
     if isinstance(rows, dict): rows = rows.get("data", [rows])
@@ -109,6 +146,9 @@ def main():
         posts = source_reddit(q, limit)
     elif src == "mediacrawler":
         posts = source_mediacrawler(sys.argv[2])
+    elif src == "xhs-live":
+        q = sys.argv[2]; limit = int(sys.argv[sys.argv.index("--limit")+1]) if "--limit" in sys.argv else 15
+        posts = source_xhs_live(q, limit)
     elif src == "x":
         posts = source_x(sys.argv[2])
     elif src == "manual":

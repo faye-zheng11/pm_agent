@@ -182,19 +182,23 @@ class Runner:
             if (self.package_dir / "scripts" / "social_ingest.py").is_file():
                 def social(_task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
                     source=str(arguments.get("source") or "reddit");query=str(arguments.get("query") or "").strip();limit=min(max(int(arguments.get("limit") or 8),1),20)
-                    command=[sys.executable,str(self.package_dir/"scripts"/"social_ingest.py")]
+                    command=[sys.executable,str(self.package_dir/"scripts"/"social_ingest.py")];timeout=90;boundary="只读取公开 Reddit 或用户主动导出的材料"
+                    target=str(arguments.get("path") or "").strip()
                     if source == "reddit": command += ["reddit",query,"--limit",str(limit)]
+                    elif source == "xiaohongshu" and not target:
+                        if not query: raise RuntimeError("小红书 live 抓取需要 query 关键词")
+                        command += ["xhs-live",query,"--limit",str(limit)];timeout=260;boundary="小红书 live 抓取：使用你已扫码登录的会话，仅个人研究用途、账号风险自负；会话失效会提示重新登录"
                     elif source in {"x","xiaohongshu","mediacrawler"}:
-                        target=str(arguments.get("path") or "").strip();allowed=set(_task.get("source_artifacts") or [])
-                        if not target or target not in allowed: raise RuntimeError("X/小红书必须先提供已授权的 JSON 导出文件")
+                        allowed=set(_task.get("source_artifacts") or [])
+                        if not target or target not in allowed: raise RuntimeError("X、或用导出文件方式的小红书，必须先在 source_artifacts 里授权该 JSON")
                         path=Path(target)
                         if not path.is_absolute(): path=(self.project_dir / target.removeprefix(f"projects/{self.project_dir.name}/")).resolve()
                         if not path.is_file() or path.suffix.lower() != ".json": raise RuntimeError("社媒导入文件必须是 JSON")
                         command += ["x" if source == "x" else "mediacrawler",str(path)]
                     else: raise RuntimeError("source 只能是 reddit、x 或 xiaohongshu")
-                    completed=subprocess.run(command,capture_output=True,text=True,timeout=90,check=False)
+                    completed=subprocess.run(command,capture_output=True,text=True,timeout=timeout,check=False)
                     if completed.returncode!=0:raise RuntimeError(completed.stderr.strip() or "社媒采集失败")
-                    return {"source":source,"query":query,"posts":json.loads(completed.stdout),"login_boundary":"只读取公开 Reddit 或用户主动导出的材料"}
+                    return {"source":source,"query":query,"posts":json.loads(completed.stdout),"login_boundary":boundary}
                 result["social_ingest"] = social
         demo_script = self.package_dir / "scripts" / "demo_gen.py"
         if demo_script.is_file() and keychain_token():

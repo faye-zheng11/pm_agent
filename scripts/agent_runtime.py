@@ -2986,7 +2986,7 @@ class AgentWorker:
                 "search_arguments": {"query": "2-500 字符", "topic": "general|news", "time_range": "day|week|month|year|空", "max_results": "1-8"},
                 "extract_arguments": {"url": "公开 http(s) URL"},
             },
-            "social_ingest": {"arguments": {"source": "reddit|x|xiaohongshu", "query": "公开 Reddit 研究词", "path": "任务 source_artifacts 中已授权的导出 JSON", "limit": "1-20"}, "note": "平台按研究问题和可访问性选择：Reddit 可公开检索；X/小红书只读取用户主动上传的导出材料，不绕过登录。公开讨论默认是观察信号，不等于真实需求。"},
+            "social_ingest": {"arguments": {"source": "reddit|x|xiaohongshu", "query": "Reddit 或小红书的研究关键词", "path": "可选：source_artifacts 中已授权的导出 JSON", "limit": "1-20"}, "note": "Reddit 公开检索。小红书：source=xiaohongshu 且不带 path 时，用用户已扫码登录的本机会话 live 按关键词抓（个人研究用途；会话失效会返回 xhs_login_required 提示，不要伪装已抓）。X、或带 path 的小红书读用户授权导出。公开讨论默认是观察信号(B 级)，不等于真实需求。"},
             "signal_ledger": {
                 "actions": ["list", "upsert", "transition"],
                 "upsert_arguments": {"signal": {"id": "稳定 ID", "title": "标题", "url": "真实 URL", "status": "watching|candidate|converted|expired|rejected"}},

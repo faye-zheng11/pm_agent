@@ -28,3 +28,8 @@ EVAL-SMOKE-REPORT.md
 .DS_Store
 .idea/
 .vscode/
+
+# ── 第三方社媒抓取器(个人研究、不入库)+ 登录 cookie ──
+runtime/vendor/
+**/xhs-cookie*
+**/*-cookie.json
