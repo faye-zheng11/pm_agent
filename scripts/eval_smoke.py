@@ -199,7 +199,8 @@ def run_case(runtime: AgentRuntime, case: dict[str, Any], tools: set[str], run_i
         authority_level="draft_write",
         idempotency_key=f"smoke:{run_id}:{case['id']}",
     )
-    worker = AgentWorker(runtime, gateway_model, ToolExecutor(runtime, handlers()), max_steps=16)
+    # 使用任务/Manifest 的预算；不要让 smoke harness 覆盖 Agent 自己的模式预算。
+    worker = AgentWorker(runtime, gateway_model, ToolExecutor(runtime, handlers()))
     task, auto_inputs = _run_until_terminal(runtime, worker, task["id"], f"smoke-{run_id}")
     task["events"] = runtime.store.events(task["id"])
     task["input_requests"] = runtime.store.input_requests(task["id"])

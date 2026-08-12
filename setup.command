@@ -3,9 +3,11 @@ set -euo pipefail
 
 WORKBENCH_ROOT="${0:A:h}"
 CONFIG_DIR="$HOME/.config/pm-workbench"
-MARKETPLACE_DIR="$WORKBENCH_ROOT/.agents/plugins"
-PLUGIN_DIR="$MARKETPLACE_DIR/plugins"
+MARKETPLACE_DIR="$WORKBENCH_ROOT"
+PLUGIN_DIR="$MARKETPLACE_DIR/.agents/plugins/plugins"
 SKILL_DIR="$HOME/.codex/skills"
+RUNTIME_DIR="$CONFIG_DIR/runtime"
+BROWSER_VENV="$RUNTIME_DIR/browser-venv"
 SECRET_FILE="$WORKBENCH_ROOT/bootstrap/internal-gateway.key"
 CODEX_AUTH_FILE="$HOME/.codex/auth.json"
 
@@ -15,6 +17,11 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
 fi
 if ! command -v python3 >/dev/null 2>&1; then
   echo "未找到 Python 3，请先安装 Python 3.11 或更高版本。"
+  exit 1
+fi
+PYTHON_VERSION="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)'; then
+  echo "当前 Python 版本为 $PYTHON_VERSION，需要 Python 3.11 或更高版本。"
   exit 1
 fi
 if [[ ! -s "$SECRET_FILE" && ! -s "$CODEX_AUTH_FILE" ]]; then
@@ -78,13 +85,28 @@ else
   echo "未找到 Codex CLI：Skill 已就位，但四个 Agent Plugin 尚未注册。装好 Codex 后重跑本脚本即可。"
 fi
 
-if ! python3 -c 'import playwright' >/dev/null 2>&1; then
-  echo "正在安装 UX Reviewer 所需的 Playwright..."
-  python3 -m pip install --user playwright >/dev/null 2>&1 || echo "Playwright Python 包安装失败，UX 页面会明确降级。"
+PLAYWRIGHT_STATUS="unavailable"
+mkdir -p "$RUNTIME_DIR"
+if [[ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" || -x "/Applications/Chromium.app/Contents/MacOS/Chromium" ]]; then
+  PLAYWRIGHT_STATUS="ready"
+else
+  if [[ ! -x "$BROWSER_VENV/bin/python" ]]; then
+    python3 -m venv "$BROWSER_VENV" >/dev/null 2>&1 || true
+  fi
+  if [[ -x "$BROWSER_VENV/bin/python" ]] && "$BROWSER_VENV/bin/python" -m pip install --disable-pip-version-check --quiet playwright >/dev/null 2>&1; then
+    if "$BROWSER_VENV/bin/python" -m playwright install chromium >/dev/null 2>&1; then
+      PLAYWRIGHT_STATUS="ready"
+    fi
+  fi
 fi
-python3 -m playwright install chromium >/dev/null 2>&1 || echo "Chromium 安装失败，UX 页面会明确降级。"
+if [[ "$PLAYWRIGHT_STATUS" == "ready" ]]; then
+  echo "UX Reviewer 浏览器走查：已就绪（Playwright + 本机浏览器）。"
+else
+  echo "UX Reviewer 浏览器走查：未就绪。基础 Agent 仍可用，但 HTML Demo 只能明确降级。"
+  echo "可稍后重试：$BROWSER_VENV/bin/python -m pip install playwright && $BROWSER_VENV/bin/python -m playwright install chromium"
+fi
 
 chmod +x "$WORKBENCH_ROOT/setup.command"
-echo "安装完成。"
+echo "基础安装完成。"
 echo "现在进任意项目目录，在 Codex 或 Claude 里说一声 “pm” 开始，"
 echo "或直接点名，例如：使用 product-shaper 把这个想法做成产品方案。"

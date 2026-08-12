@@ -3,9 +3,9 @@
 ## 给同事
 
 1. 将整个目录放到本机内部工作目录。
-2. 双击 `setup.command` 完成 Keychain、Plugin、Skill、Marketplace 和 Playwright 安装。
-3. 双击 `start.command` 打开 HTML 工作台。
-4. 在首页新建自己的项目，或先用 `Starline 脱敏示例` 熟悉流程。
+2. 双击 `setup.command` 完成 Keychain、Plugin、Skill、Marketplace 和 Playwright 安装；如果浏览器不可用，脚本会明确提示，其他 Agent 仍可用。
+3. HTML 工作台只在内部本机保留，不随 GitHub 交付；推荐在 Codex 项目对话中直接说 `pm`。
+4. 在 Codex 中进入自己的项目目录后说 `pm`，或直接点名需要的 Agent/Skill。
 
 如果同事已经有资料，点击网页右上角 `+` → `导入已有资料`，可一次选择文件夹或文件，并登记 Figma / 飞书链接。导入后首页会显示资料清单、当前阶段、最近任务和下一步建议；外部链接需要对应连接器或授权才能读取。
 

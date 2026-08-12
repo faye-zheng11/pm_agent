@@ -16,7 +16,7 @@ projects/*
 # ── 生成物（setup.command 会用 export_agent_package.py 重建）──
 .agents/plugins/plugins/
 
-# ── HTML 工作台：改用 Codex/Claude，不随库分发 ──
+# ── HTML 工作台：仅本机使用，不随仓库分发 ──
 pm-workbench.html
 start.command
 

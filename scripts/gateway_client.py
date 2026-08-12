@@ -224,10 +224,10 @@ def post_stream(
     return raw_body
 
 
-def _stream_content(raw_body: str) -> str:
-    """解析 OpenAI SSE delta；网关返回普通 JSON 时直接读取 message.content。"""
+def _stream_parts(raw_body: str) -> tuple[str, str]:
+    """解析 SSE，分别返回最终回答和推理片段。"""
     chunks: list[str] = []
-    json_candidates: list[str] = []
+    reasoning_chunks: list[str] = []
     for line in raw_body.splitlines():
         line = line.strip()
         if not line:
@@ -236,7 +236,6 @@ def _stream_content(raw_body: str) -> str:
             line = line[5:].strip()
         if line == "[DONE]":
             continue
-        json_candidates.append(line)
         try:
             value = json.loads(line)
         except json.JSONDecodeError:
@@ -249,14 +248,23 @@ def _stream_content(raw_body: str) -> str:
         choice = choices[0]
         delta = choice.get("delta") or {}
         content: Any = delta.get("content") if isinstance(delta, dict) else None
+        reasoning: Any = delta.get("reasoning_content") if isinstance(delta, dict) else None
         if content is None:
             content = (choice.get("message") or {}).get("content")
+        if reasoning is None:
+            reasoning = (choice.get("message") or {}).get("reasoning_content")
         if isinstance(content, list):
             content = "".join(str(item.get("text") or "") for item in content if isinstance(item, dict))
+        if isinstance(reasoning, list):
+            reasoning = "".join(str(item.get("text") or "") for item in reasoning if isinstance(item, dict))
         if isinstance(content, str):
             chunks.append(content)
+        if isinstance(reasoning, str):
+            reasoning_chunks.append(reasoning)
     if chunks:
-        return "".join(chunks)
+        return "".join(chunks), "".join(reasoning_chunks)
+    if reasoning_chunks:
+        return "", "".join(reasoning_chunks)
     try:
         value = json.loads(raw_body.strip())
     except json.JSONDecodeError:
@@ -264,10 +272,19 @@ def _stream_content(raw_body: str) -> str:
     if isinstance(value, dict):
         choices = value.get("choices") or []
         if choices:
-            content = ((choices[0].get("message") or {}).get("content") if isinstance(choices[0], dict) else None)
+            message = ((choices[0].get("message") or {}) if isinstance(choices[0], dict) else {})
+            content = message.get("content")
+            reasoning = message.get("reasoning_content")
             if isinstance(content, str):
-                return content
-    return ""
+                return content, reasoning if isinstance(reasoning, str) else ""
+            if isinstance(reasoning, str):
+                return "", reasoning
+    return "", ""
+
+
+def _stream_content(raw_body: str) -> str:
+    """兼容旧调用方，只返回最终回答，不把推理冒充成结果。"""
+    return _stream_parts(raw_body)[0]
 
 
 def chat_completion(
@@ -294,6 +311,7 @@ def chat_completion(
     }
     endpoint = base_url.rstrip("/") + "/v1/chat/completions"
     fixed_gateway = "aigateway-infra.oppaya.app" in endpoint
+    saw_reasoning_only = False
     for attempt in range(2):
         with _gateway_process_lock():
             if stream:
@@ -304,7 +322,8 @@ def chat_completion(
                     timeout_seconds=timeout_seconds,
                     insecure=fixed_gateway and allow_fixed_gateway_tls_exception,
                 )
-                content = _stream_content(raw_body)
+                content, reasoning = _stream_parts(raw_body)
+                saw_reasoning_only = saw_reasoning_only or bool(reasoning.strip())
             else:
                 value = post_json(
                     endpoint,
@@ -319,10 +338,14 @@ def chat_completion(
                     raise GatewayError("AI 网关返回格式无效", category="gateway_protocol") from exc
                 choices = value.get("choices") or []
                 content = ((choices[0].get("message") or {}).get("content") if choices else None)
+                reasoning = ((choices[0].get("message") or {}).get("reasoning_content") if choices else None)
                 if isinstance(content, list):
                     content = "".join(str(item.get("text") or "") for item in content if isinstance(item, dict))
+                saw_reasoning_only = saw_reasoning_only or (isinstance(reasoning, str) and bool(reasoning.strip()))
         if isinstance(content, str) and content.strip():
             return content
         if attempt == 0:
             time.sleep(0.8)
+    if saw_reasoning_only:
+        raise GatewayError("AI 网关只返回了 reasoning_content，未返回最终 content（已自动重试 1 次）", category="gateway_protocol")
     raise GatewayError("AI 网关返回了空内容（已自动重试 1 次）", category="gateway_protocol")

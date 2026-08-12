@@ -15,7 +15,14 @@ async def walk(demo_path, outdir):
     url = "file://" + os.path.abspath(demo_path)
     findings = {"demo": demo_path, "viewports": {}, "issues": []}
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser_path = next((candidate for candidate in (
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        ) if os.path.isfile(candidate)), "")
+        launch_options = {"headless": True}
+        if os.path.isfile(browser_path):
+            launch_options["executable_path"] = browser_path
+        browser = await p.chromium.launch(**launch_options)
         for vp, (w, h) in VIEWPORTS.items():
             page = await browser.new_page(viewport={"width": w, "height": h})
             await page.goto(url); await page.wait_for_timeout(400)

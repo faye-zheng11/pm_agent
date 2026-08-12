@@ -711,8 +711,16 @@ def validate_opportunity_research(review: Any, task: dict[str, Any]) -> dict[str
         seen_urls.add(normalized)
         if signal["classification"] not in {"fact", "inference", "insufficient"} or signal["evidence_grade"] not in {"A", "B", "C"}:
             raise ContractError(f"{label} 分类或证据等级无效")
+        if signal["source_type"] not in {"official", "community", "app_store", "social", "media", "research", "other"}:
+            raise ContractError(f"{label}.source_type 无效")
         if not isinstance(signal["score"], int) or not 0 <= signal["score"] <= 8:
             raise ContractError(f"{label}.score 必须为 0-8")
+        if signal["evidence_grade"] == "C" or signal["score"] < 5:
+            raise ContractError(f"{label} 未达到机会信号门槛：必须为 A/B 级且评分至少 5/8")
+        for field in ("id", "title", "accessed_at", "source_summary", "user_behavior", "current_alternative", "why_it_matters", "testable_opportunity"):
+            require_string(signal, field, label)
+        if not isinstance(signal["limitations"], list) or any(not isinstance(item, str) or not item.strip() for item in signal["limitations"]):
+            raise ContractError(f"{label}.limitations 必须是非空字符串数组")
     if not signals and not str(review["no_signal_reason"]).strip():
         raise ContractError("零信号结果必须说明 no_signal_reason")
     for key in ("duplicates", "unavailable_sources", "sample_biases"):
@@ -2566,9 +2574,11 @@ class ToolExecutor:
             return {"ok": False, "tool": "browser_review", "status": "unavailable", "reason": "ux_walk.py 不存在，未执行真实浏览器走查", "target": target}
         output_dir = self.runtime.projects.resolve(task["project_id"])["path"] / ".workbench" / "agent-runs" / task["id"] / "browser-review"
         output_dir.mkdir(parents=True, exist_ok=True)
+        browser_python = Path.home() / ".config" / "pm-workbench" / "runtime" / "browser-venv" / "bin" / "python"
+        runner = str(browser_python) if browser_python.is_file() else sys.executable
         try:
             completed = subprocess.run(
-                [sys.executable, str(script), str(path), str(output_dir)],
+                [runner, str(script), str(path), str(output_dir)],
                 capture_output=True, text=True, timeout=150, check=False,
                 env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
             )
@@ -2915,7 +2925,7 @@ class AgentWorker:
                 "判决硬规则：有 blocker=Block；无 blocker 但有 major=Conditional；否则 Pass。"
             )
         elif task["assigned_agent"] == "opportunity_researcher":
-            schema_text = "根对象除通用 Agent Result 外必须包含 opportunity_research。最多 5 条 signals；每条必须有真实 http(s) URL、访问日期、来源类型、事实/推断/证据不足、A/B/C 证据等级、用户行为、现有替代、价值、可测试机会、0-8 分和限制。零信号必须说明原因。先根据主题、目标用户、时间范围和决定规划来源：公开网页/竞品/应用商店/Reddit 可在线读取；X/小红书需要用户提供已登录后导出的 JSON，不能要求 Agent 保存账号密码或声称已登录抓取。没有可访问来源时明确写限制，不用热度补需求。研究任务默认只允许公开读取、项目内信号台账和草稿产物写入；不要请求 external_write。只有用户明确要求写入外部系统时才请求外部审批。\n完整 Result Schema：\n" + full_schema_text + "\n完整 opportunity_research Schema：\n" + specialized_schema_text
+            schema_text = "根对象除通用 Agent Result 外必须包含 opportunity_research。最多 5 条 signals；每条必须有真实 http(s) URL、访问日期、来源类型、事实/推断/证据不足、A/B/C 证据等级、用户行为、现有替代、价值、可测试机会、0-8 分和限制。零信号必须说明原因。先根据主题、目标用户、时间范围和决定规划来源：公开网页/竞品/应用商店/Reddit 可在线读取；X/小红书需要用户提供已登录后导出的 JSON，不能要求 Agent 保存账号密码或声称已登录抓取。没有可访问来源时明确写限制，不用热度补需求。研究任务默认只允许公开读取、项目内信号台账和草稿产物写入；不要请求 external_write。只有用户明确要求写入外部系统时才请求外部审批。\n\n【产品机会过滤门】\n每次搜索前先写清本次查询要验证的用户行为或产品决策。优先搜索用户正在做什么、遇到什么阻力、使用什么替代、为什么迁移或付费；不要把“市场很大”“内容很火”“大家感兴趣”当机会。媒体、SEO、厂商、购物页、联盟页和泛行业报告只能作为背景，不能单独形成 signal。一个 signal 至少要能回答：目标用户是谁、发生了什么具体行为或问题、现在如何解决、这条信息会改变什么产品决定。搜索结果没有这四项就放入 unavailable_sources 或忽略，不要原样塞进 signals。最多保留 3 条主机会，只有能改变产品判断的第 4-5 条才保留。\n\n【研究预算与早停】\n新项目研究最多做 2 轮聚焦搜索和 2 轮原文回读；找到 2-3 条通过过滤门的信号后立即停止，不再为了凑够来源继续搜。连续两轮聚焦搜索仍没有具体行为证据，就输出“没有可靠公开信号”，写清来源限制和最快验证，不继续追问。每次工具调用都必须服务于一个未回答的子问题，不得重复搜索相同泛关键词。\n\n【输出质量门】\nsignals 只允许 A/B 级、评分至少 5/8、包含真实可回读 URL 和非空 limitations；低于门槛的内容必须留在未核验或噪音说明中。机会结论先说建议继续探索、暂不建议立项或需要验证，不要返回链接堆。\n完整 Result Schema：\n" + full_schema_text + "\n完整 opportunity_research Schema：\n" + specialized_schema_text
         elif task["assigned_agent"] == "product_shaper":
             delivery_note = {
                 "product.prd": "本任务已通过 Workflow 的 PM 产品门禁，必须使用 prd-writing 并通过 artifact_store 生成正式 PRD。",
@@ -3098,7 +3108,7 @@ class AgentWorker:
             completed_steps = int(checkpoint.get("completed_steps") or 0) if isinstance(checkpoint, dict) else 0
             tool_calls = int(checkpoint.get("tool_calls") or 0) if isinstance(checkpoint, dict) else 0
             if completed_steps >= max_steps:
-                raise ContractError(f"Agent 已用完最大步骤数 {max_steps}，检查点中仍未返回 final")
+                return self._finalize_after_budget(task_id, worker_id, system, messages, max_steps)
             for step in range(completed_steps + 1, max_steps + 1):
                 compacted = self._compact_checkpoint_messages(messages)
                 if len(compacted) != max(0, len(messages) - 1) or sum(len(item.get("content", "")) for item in compacted) < sum(len(item.get("content", "")) for item in messages[1:]):

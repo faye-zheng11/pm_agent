@@ -5,7 +5,7 @@
       "name": "opportunity-researcher",
       "source": {
         "source": "local",
-        "path": "./plugins/opportunity-researcher"
+        "path": "./.agents/plugins/plugins/opportunity-researcher"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -17,7 +17,7 @@
       "name": "product-shaper",
       "source": {
         "source": "local",
-        "path": "./plugins/product-shaper"
+        "path": "./.agents/plugins/plugins/product-shaper"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -29,7 +29,7 @@
       "name": "user-experience-reviewer",
       "source": {
         "source": "local",
-        "path": "./plugins/user-experience-reviewer"
+        "path": "./.agents/plugins/plugins/user-experience-reviewer"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -41,7 +41,7 @@
       "name": "independent-critic",
       "source": {
         "source": "local",
-        "path": "./plugins/independent-critic"
+        "path": "./.agents/plugins/plugins/independent-critic"
       },
       "policy": {
         "installation": "AVAILABLE",

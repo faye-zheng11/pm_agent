@@ -7,7 +7,7 @@
   "mission": "从公开用户内容、社区、竞品、应用商店和行业资料中发现有来源、可验证、可转成产品行动的机会。",
   "modes": [
     {"id": "casual_scan", "task_type": "opportunity.scan", "label": "随便看看", "project_required": false, "budget": {"max_model_steps": 12, "max_tool_calls": 6, "max_handoffs": 1}},
-    {"id": "new_project", "task_type": "opportunity.new_project", "label": "新项目找方向", "project_required": false, "budget": {"max_model_steps": 16, "max_tool_calls": 14, "max_handoffs": 1}},
+    {"id": "new_project", "task_type": "opportunity.new_project", "label": "新项目找方向", "project_required": false, "budget": {"max_model_steps": 18, "max_tool_calls": 16, "max_handoffs": 1}},
     {"id": "current_product", "task_type": "opportunity.current_product", "label": "现有产品找迭代机会", "project_required": true, "budget": {"max_model_steps": 14, "max_tool_calls": 10, "max_handoffs": 1}}
   ],
   "inputs": [

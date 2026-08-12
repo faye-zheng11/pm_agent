@@ -35,7 +35,9 @@
 2. 写入不含 Token 的本机网关配置。
 3. 注册四个 Codex Plugin（Agent）。
 4. 安装三个 Skill（`pmf-bet-brief`、`prd-writing`、`pm` 接待员）。
-5. 尝试安装 UX Reviewer 真实走查所需的 Playwright Chromium。
+5. 在 `~/.config/pm-workbench/runtime/browser-venv` 中安装 UX Reviewer 所需的 Playwright；浏览器优先使用本机 Google Chrome，其次使用 Chromium。两者都不可用时只降级 UX 浏览器走查，不影响其他 Agent。
+
+HTML 工作台是本机使用入口，不随 GitHub 交付。GitHub 版本只交付 Agent、Skill、Workflow、运行时和安装器；在 Codex 中直接说 `pm` 是推荐用法。
 
 **凭据**：仓库里**不含任何真实 Token**。两种提供方式——① 本机已登录 Codex，`setup.command` 自动使用；② 没有的话，`cp bootstrap/internal-gateway.key.example bootstrap/internal-gateway.key` 后填入网关 Key，`setup.command` 导入 Keychain 后即可删除该文件。**任何情况下都不要把真实 Key 提交回仓库。**
 
@@ -105,7 +107,7 @@ Skill 是跨工具标准：把 `skills/<name>` 拷到 `~/.claude/skills/`，在 
 ## 工具连接状态（没连上会明说，不假装）
 
 - 公开 Web 与 Reddit：需要本机 `TAVILY_API_KEY` 或 `~/.config/pm-workbench/tavily-api-key`。
-- Playwright：由 `setup.command` 尝试安装；失败时 UX Reviewer 明确降级。
+- Playwright：由 `setup.command` 安装到独立 venv，并优先驱动本机 Google Chrome；浏览器不可用时 UX Reviewer 明确降级。
 - Figma：可选，需要连接和外部写入审批；不可用时只输出设计任务。
 - `critic_gateway`：可选，读取现有 Codex MCP 配置并强制只读、项目绑定。
 - 浏览器、运行日志和项目文件都不保存网关 Token；本机已登录 Codex 时复用 `~/.codex/auth.json`，不复制到项目。
