@@ -6,7 +6,7 @@
       "name": "Project Memory",
       "risk": "read_only",
       "approval": "never",
-      "description": "读取、搜索 Project Context、Canon、Assumptions、Evidence、Decisions、Bet 和 Feature，并生成带来源的 context_snapshot / decision_readiness。"
+      "description": "读取、搜索 Project Context、Canon、Assumptions、Evidence、Decisions、Bet 和 Feature，并生成带来源的 context_snapshot / decision_readiness。action=recent_results 返回本项目最近已完成的上游 Agent 产出摘要（谁做的、结论、交接建议），供下游 Agent 直接衔接，不必让 PM 手动搬运上游结果。"
     },
     {
       "id": "artifact_store",

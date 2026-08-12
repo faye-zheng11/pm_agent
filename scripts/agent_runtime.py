@@ -2524,10 +2524,48 @@ class ToolExecutor:
                 "delivery_gate": "definition_allowed" if active_bets or decisions else "discovery_only",
                 "source_paths": pack["source_paths"],
             }
+            readiness["recent_agent_results"] = self._recent_agent_results(task)
             if action == "context_snapshot":
                 readiness["context"] = pack["context_text"]
             return {"ok": True, "tool": "project_memory", "action": action, **readiness}
+        if action == "recent_results":
+            return {
+                "ok": True,
+                "tool": "project_memory",
+                "action": action,
+                "recent_agent_results": self._recent_agent_results(task, limit=int(arguments.get("limit") or 5)),
+            }
         raise ContractError(f"project_memory 不支持 action: {action}")
+
+    def _recent_agent_results(self, task: dict[str, Any], limit: int = 3) -> list[dict[str, Any]]:
+        """本项目最近已完成的 Agent 产出摘要，供下游 Agent 免去 PM 手动搬运上游结果。仅限当前项目、只读。"""
+        limit = max(1, min(limit, 10))
+        digests: list[dict[str, Any]] = []
+        try:
+            completed = self.runtime.store.list(task["project_id"], "completed")
+        except Exception:
+            return digests
+        for item in completed:
+            if item.get("id") == task.get("id"):
+                continue
+            result = item.get("result") if isinstance(item.get("result"), dict) else None
+            if not result:
+                continue
+            handoffs = result.get("recommended_handoffs") if isinstance(result.get("recommended_handoffs"), list) else []
+            digests.append({
+                "task_id": item.get("id"),
+                "agent": item.get("assigned_agent"),
+                "task_type": item.get("task_type"),
+                "goal": (item.get("goal") or "")[:200],
+                "summary": (result.get("summary") or "")[:600],
+                "recommended_handoffs": [
+                    {"to_agent": h.get("to_agent"), "goal": (h.get("goal") or "")[:160]}
+                    for h in handoffs if isinstance(h, dict)
+                ][:3],
+            })
+            if len(digests) >= limit:
+                break
+        return digests
 
     def _artifact_store(self, task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
         if task["authority_level"] not in {"draft_write", "reversible_action", "external_action"}:
