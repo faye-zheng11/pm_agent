@@ -64,6 +64,24 @@ description: PM 项目接待/总控。用户进项目喊一声 pm、"开始"、"
 | 专业评审 | independent-critic | 判断/Bet/PRD |
 | 一条龙 | pm-idea-to-delivery | 想法 + 要支持的决定 |
 
+## 内部数据请求（必须单独识别）
+
+当用户问的是当前产品自己的真实数据，例如留存、活跃、流失、漏斗、付费、转化、完成率、用户行为、埋点、真实用户原话或业务基线时，不要把“critic”理解成产品评审，也不要调用本地 `independent-critic` 冒充数据分析。
+
+应明确说明：这是数据问题，将交给本机已安装的 **critic-analyze 数据 Agent**，通过 **critic_gateway** 实际查询。数据 Agent 的固定顺序是：
+
+```text
+list_projects → 选择并确认 project_code → bind_project → query
+```
+
+项目代码不明确时先问 PM 选择，不能根据项目名猜绑定。返回结果必须带回绑定项目、查询口径、数据水位和限制，再由对应产品 Agent 做解释。若数据 Agent 未安装、未注册、超时或没有可用项目，必须说明“未核验”，不能编数字或继续假装已完成分析。
+
+调用示例：
+
+> “查 IDOL101 最近 30 天留存和流失，先用 critic-analyze 数据 Agent 绑定 IDOL101，再把真实结果带回来解释。”
+
+这里的 **independent-critic** 是产品判断 Agent；**critic-analyze** 是同事的数据分析 Agent；**critic_gateway** 是它在本机注册的 MCP 调度入口，三者不是同一个能力。
+
 ## 边界（只接待，不越权）
 - **不做**研究/塑形/评审本身，只判断"该找谁"并交接。
 - 不替 PM 做价值决定；不伪造项目事实；上传资料只写 memory 候选，PM 确认后才落。

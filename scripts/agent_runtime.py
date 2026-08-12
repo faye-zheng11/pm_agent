@@ -2385,6 +2385,22 @@ class ContextAssembler:
             content = self._read(asset_path, 12000).strip()
             if content:
                 knowledge_chunks.append(f"## {asset_path.relative_to(self.runtime.root).as_posix()}\n{content}")
+        data_sop_text = ""
+        if "data_gateway" in task.get("allowed_tools", []):
+            # The data gateway is a real external Agent, not a generic SQL box.
+            # Load its installed SOP when available so PM agents preserve the
+            # same binding, freshness, metric, and evidence rules.
+            data_skill_root = Path.home() / ".claude" / "skills" / "critic-analyze"
+            data_candidates = [
+                data_skill_root / "SKILL.md",
+                data_skill_root / "references" / "workflow.md",
+            ]
+            data_chunks: list[str] = []
+            for data_path in data_candidates:
+                content = self._read(data_path, 18000).strip()
+                if content:
+                    data_chunks.append(f"## {data_path}\n{content}")
+            data_sop_text = "\n\n".join(data_chunks)[:32000]
         return {
             "project": {"id": project["id"], "name": project["name"], "path": str(project_path)},
             "project_config": config,
@@ -2393,6 +2409,7 @@ class ContextAssembler:
             "context_text": "\n\n".join(chunks),
             "skills_text": "\n\n".join(skill_chunks)[:42000],
             "knowledge_text": "\n\n".join(knowledge_chunks)[:24000],
+            "data_sop_text": data_sop_text,
             "memory_text": self.runtime.memory_context(task["project_id"], f"{task['goal']}\n{task['decision_to_support']}", limit=8),
         }
 
@@ -3102,6 +3119,9 @@ class AgentWorker:
             "当任务是新项目找方向、公开竞品、行业或社媒研究时，默认使用 web_research/social_ingest，不要因为 data_gateway 可用就强行查询。"
             "data_gateway 必须遵循 critic-analyze SOP：先 list_projects；项目代码不明确时用 request_input 请 PM 选择；明确后调用 bind_project，再 query。严禁根据项目名称或模型记忆猜绑定。数据 Agent 返回的 SQL、口径、水位和限制必须进入最终结果。"
             "任何数据结论都必须同时写清项目绑定、查询口径、时间水位和限制；工具失败就保留未核验状态。\n\n"
+            "【已加载的 critic-analyze 数据 Agent SOP】\n"
+            + (context.get("data_sop_text") or "当前没有安装 critic-analyze SOP；不得假装已完成数据分析。")
+            + "\n\n"
             "每一步只返回一个 JSON 对象，不要输出 JSON 之外的文字。协议如下：\n"
             '{"kind":"tool_call","tool":"project_memory","arguments":{"action":"read_file","path":"..."},"reason":"为什么需要"}\n'
             "或：\n"
@@ -3153,6 +3173,50 @@ class AgentWorker:
             "saved_at": utc_now(),
         })
 
+    @staticmethod
+    def _requires_internal_data(task: dict[str, Any]) -> bool:
+        """Detect explicit internal-data decisions that must use critic-analyze.
+
+        This is intentionally narrower than the word "data": market research,
+        public social content, and competitor scans are not internal BI queries.
+        The gate protects conclusions about the product's own users and metrics.
+        """
+        if "data_gateway" not in task.get("allowed_tools", []):
+            return False
+        text = " ".join(
+            str(task.get(key) or "")
+            for key in ("goal", "decision_to_support", "context", "source_artifacts")
+        ).lower()
+        cues = (
+            "内部数据", "业务数据", "真实用户", "用户行为", "行为基线", "埋点",
+            "留存", "活跃", "流失", "漏斗", "付费", "收入", "转化率", "完成率",
+            "复购", "留存率", "dau", "wau", "mau", "retention", "churn",
+            "funnel", "conversion", "revenue", "cohort", "session", "event data",
+            "mixpanel", "mysql", "bi_metric", "data_gateway", "critic-analyze",
+        )
+        return any(cue in text for cue in cues)
+
+    def _has_data_gateway_call(self, task_id: str) -> bool:
+        return any(
+            item.get("kind") == "tool.completed"
+            and item.get("details", {}).get("tool") == "data_gateway"
+            and item.get("details", {}).get("action") == "query"
+            for item in self.runtime.store.events(task_id)
+        )
+
+    def _require_data_gateway_observation(self, task_id: str, result: dict[str, Any]) -> None:
+        """Reject a completed internal-data result that never touched the data Agent."""
+        task = self.runtime.store.get(task_id)
+        if result.get("status") != "completed":
+            return
+        if not self._requires_internal_data(task) or self._has_data_gateway_call(task_id):
+            return
+        raise ContractError(
+            "该任务涉及内部用户/业务数据，但本次 Trace 没有 data_gateway 的成功工具观察；"
+            "不得把模型知识或项目文件中的数字当作数据 Agent 结果。请先按 "
+            "list_projects -> bind_project -> query 调用 critic-analyze；若无法调用，提交 blocked 并明确未核验。"
+        )
+
     def _finalize_after_budget(
         self,
         task_id: str,
@@ -3180,6 +3244,7 @@ class AgentWorker:
             if action["kind"] == "final":
                 current = self.runtime.store.get(task_id)
                 result = validate_result(action["result"], current)
+                self._require_data_gateway_observation(task_id, result)
                 if result["status"] == "completed":
                     validate_result_against_capability(result, self.runtime.registry.capabilities[current["assigned_agent"]])
                     self.runtime.store.record_event(task_id, "task.budget_finalized", worker_id, {"status": "completed"})
@@ -3354,6 +3419,7 @@ class AgentWorker:
                 current = self.runtime.store.get(task_id)
                 try:
                     result = validate_result(action["result"], current)
+                    self._require_data_gateway_observation(task_id, result)
                     if result["status"] == "completed":
                         validate_result_against_capability(result, capability)
                 except ContractError as exc:
