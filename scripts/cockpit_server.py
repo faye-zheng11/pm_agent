@@ -58,6 +58,7 @@ CORE_SKILLS = ("pmf-bet-brief", "prd-writing")
 CORE_WORKFLOW = "pm-idea-to-delivery"
 _runtime: AgentRuntime | None = None
 _runtime_lock = threading.Lock()
+_critic_gateway_probe: tuple[float, bool] | None = None
 
 
 def now_date() -> str:
@@ -292,20 +293,47 @@ def persona_review(task: dict[str, Any], arguments: dict[str, Any]) -> dict[str,
 
 
 def critic_gateway_available() -> bool:
+    global _critic_gateway_probe
+    if _critic_gateway_probe and time.time() - _critic_gateway_probe[0] < 30:
+        return _critic_gateway_probe[1]
     config = Path.home() / ".codex" / "config.toml"
     try:
-        return "[mcp_servers.critic_gateway]" in config.read_text(encoding="utf-8")
-    except OSError:
-        return False
+        text = config.read_text(encoding="utf-8")
+        if "[mcp_servers.critic_gateway]" not in text:
+            _critic_gateway_probe = (time.time(), False)
+            return False
+        bridge = ROOT / "runtime" / "connectors" / "critic_mcp_bridge.py"
+        if not bridge.is_file():
+            _critic_gateway_probe = (time.time(), False)
+            return False
+        result = subprocess.run(
+            [sys.executable, str(bridge), "--action", "list_projects"],
+            cwd=ROOT, capture_output=True, text=True, timeout=15, check=False,
+        )
+        value = json.loads(result.stdout)
+        available = result.returncode == 0 and isinstance(value, dict) and value.get("ok") is True
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        available = False
+    _critic_gateway_probe = (time.time(), available)
+    return available
 
 
 def data_gateway(task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
-    action = str(arguments.get("action") or "query")
-    project = runtime().projects.resolve(task["project_id"])
-    config = runtime().registry.project_config(project)
-    binding = str((config.get("tool_overrides", {}).get("data_gateway") or {}).get("binding") or "").strip()
-    if action == "query" and not binding:
-        raise ContractError(f"项目 {task['project_id']} 未配置 data_gateway binding")
+    action = str(arguments.get("action") or "query").strip()
+    if action not in {"list_projects", "query"}:
+        raise ContractError("data_gateway.action 只能是 list_projects 或 query")
+    binding = ""
+    if action == "query":
+        project = runtime().projects.resolve(task["project_id"])
+        config = runtime().registry.project_config(project)
+        binding = str((config.get("tool_overrides", {}).get("data_gateway") or {}).get("binding") or "").strip()
+        requested_binding = str(arguments.get("project_code") or "").strip()
+        if requested_binding:
+            binding = requested_binding
+        if not binding:
+            raise ContractError(
+                f"项目 {task['project_id']} 未配置 data_gateway binding；请先用 list_projects 查看可用数据项目，再请 PM 明确选择绑定"
+            )
     sql = str(arguments.get("sql") or "").strip()
     if action == "query" and (not re.match(r"(?is)^\s*(select|with)\b", sql) or re.search(r"(?is)\b(insert|update|delete|drop|alter|create|truncate)\b", sql)):
         raise ContractError("data_gateway 只允许 SELECT / WITH 只读查询")

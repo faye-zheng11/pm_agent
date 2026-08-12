@@ -62,6 +62,8 @@ def run_agent(arguments: dict[str, Any]) -> dict[str, Any]:
         allowed_tools=allowed,
         authority_level="draft_write",
         idempotency_key=str(arguments.get("idempotency_key") or ""),
+        memory_source=str(arguments.get("source") or "codex"),
+        memory_session_id=str(arguments.get("session_id") or ""),
     )
     worker = cockpit.AgentWorker(runtime, cockpit.gateway_model, cockpit.ToolExecutor(runtime, cockpit.handlers()))
     worker.run_with_retries(task["id"], "codex-workbench-worker")
@@ -101,12 +103,18 @@ def update_agent_task(arguments: dict[str, Any]) -> dict[str, Any]:
     return cockpit.task_details(task_id)
 
 
+def pm_memory(arguments: dict[str, Any]) -> dict[str, Any]:
+    project_id = resolve_project(arguments)
+    return cockpit.runtime().memory_action(project_id, str(arguments.get("action") or "context"), arguments)
+
+
 TOOLS = {
     "list_agents": ("列出四个公开 Agent 及其可用模式。", lambda args: cockpit.catalog()["agents"], {"type": "object", "properties": {}}),
-    "run_agent": ("在指定项目中用同一 AgentEngine 运行 Agent；project_id 必填，支持 inputs、材料和模式。", run_agent, {"type": "object", "required": ["project_id", "agent_id"], "properties": {"project_id": {"type": "string"}, "agent_id": {"type": "string"}, "mode": {"type": "string"}, "goal": {"type": "string"}, "decision_to_support": {"type": "string"}, "inputs": {"type": "object"}, "material_paths": {"type": "array", "items": {"type": "string"}}, "pm_confirmed": {"type": "boolean"}}}),
+    "run_agent": ("在指定项目中用同一 AgentEngine 运行 Agent；project_id 必填，支持 inputs、材料、来源和会话 ID。", run_agent, {"type": "object", "required": ["project_id", "agent_id"], "properties": {"project_id": {"type": "string"}, "agent_id": {"type": "string"}, "mode": {"type": "string"}, "goal": {"type": "string"}, "decision_to_support": {"type": "string"}, "inputs": {"type": "object"}, "material_paths": {"type": "array", "items": {"type": "string"}}, "source": {"type": "string"}, "session_id": {"type": "string"}, "pm_confirmed": {"type": "boolean"}}}),
     "run_workflow": ("在指定项目中启动并运行 pm-idea-to-delivery；流程会在 PM 门禁处返回。", run_workflow, {"type": "object", "required": ["project_id", "goal", "decision_to_support"], "properties": {"project_id": {"type": "string"}, "goal": {"type": "string"}, "decision_to_support": {"type": "string"}}}),
     "get_agent_task": ("读取 Agent 的状态、结果、追问、审批和 Trace。", get_agent_task, {"type": "object", "required": ["task_id"], "properties": {"task_id": {"type": "string"}}}),
     "update_agent_task": ("提交 Agent 的追问答案或审批决定并继续运行。", update_agent_task, {"type": "object", "required": ["task_id", "action"], "properties": {"task_id": {"type": "string"}, "action": {"type": "string"}, "input_id": {"type": "string"}, "responses": {"type": "object"}, "approval_id": {"type": "string"}, "approved": {"type": "boolean"}}}),
+    "pm_memory": ("读取或写入当前项目的跨会话 PM 记忆；原始对话追加保存，项目内容不跨项目共享。", pm_memory, {"type": "object", "required": ["project_id", "action"], "properties": {"project_id": {"type": "string"}, "action": {"enum": ["context", "search", "open_session", "append_turn", "propose_memory", "update_memory"]}, "query": {"type": "string"}, "limit": {"type": "integer"}, "source": {"type": "string"}, "session_id": {"type": "string"}, "session_db_id": {"type": "string"}, "role": {"type": "string"}, "content": {"type": "string"}, "scope": {"enum": ["project", "user"]}, "memory_type": {"type": "string"}, "confidence": {"type": "string"}, "confirm": {"type": "boolean"}, "memory_id": {"type": "string"}, "replacement_id": {"type": "string"}, "status": {"type": "string"}, "metadata": {"type": "object"}}}),
 }
 
 

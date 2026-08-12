@@ -25,6 +25,8 @@ def run_agent(arguments: dict[str, Any]) -> dict[str, Any]:
         "mode": arguments.get("mode"),
         "inputs": arguments.get("inputs") or {},
         "material_paths": arguments.get("material_paths") or [],
+        "source": arguments.get("source") or "codex",
+        "session_id": arguments.get("session_id") or "",
     })
 
 
@@ -36,11 +38,15 @@ def update_agent_task(arguments: dict[str, Any]) -> dict[str, Any]:
     return runner.update(arguments)
 
 
+def pm_memory(arguments: dict[str, Any]) -> dict[str, Any]:
+    return runner.memory(arguments)
+
+
 TOOLS = {
     "run_agent": (
         "使用 Package 的完整 AgentEngine 启动 Agent；支持多步工具循环、结构化追问、审批、重试、项目记忆和 Trace。",
         run_agent,
-        {"type":"object","required":["inputs"],"properties":{"mode":{"type":"string"},"inputs":{"type":"object"},"material_paths":{"type":"array","items":{"type":"string"}}}},
+        {"type":"object","required":["inputs"],"properties":{"mode":{"type":"string"},"inputs":{"type":"object"},"material_paths":{"type":"array","items":{"type":"string"}},"source":{"type":"string"},"session_id":{"type":"string"}}},
     ),
     "get_agent_task": (
         "读取 Agent 任务、运行状态、结果、追问、审批和 Trace。",
@@ -51,6 +57,11 @@ TOOLS = {
         "提交 Agent 追问答案或批准/拒绝审批，并用同一 AgentEngine 继续运行。",
         update_agent_task,
         {"type":"object","required":["task_id","action"],"properties":{"task_id":{"type":"string"},"action":{"enum":["provide_input","decide_approval"]},"input_id":{"type":"string"},"responses":{"type":"object"},"approval_id":{"type":"string"},"approved":{"type":"boolean"}}},
+    ),
+    "pm_memory": (
+        "读取或写入当前项目的跨会话 PM 记忆；原始对话追加保存，项目内容不跨项目共享。",
+        pm_memory,
+        {"type":"object","required":["action"],"properties":{"action":{"enum":["context","search","open_session","append_turn","propose_memory","update_memory"]},"query":{"type":"string"},"limit":{"type":"integer"},"source":{"type":"string"},"session_id":{"type":"string"},"session_db_id":{"type":"string"},"role":{"type":"string"},"content":{"type":"string"},"scope":{"enum":["project","user"]},"memory_type":{"type":"string"},"confidence":{"type":"string"},"confirm":{"type":"boolean"},"memory_id":{"type":"string"},"replacement_id":{"type":"string"},"status":{"type":"string"},"metadata":{"type":"object"}}},
     ),
 }
 

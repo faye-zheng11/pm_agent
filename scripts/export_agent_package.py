@@ -39,6 +39,7 @@ def export_package(package_id: str, output_root: Path) -> tuple[Path, Path]:
     shutil.copy2(shared / "standalone.html", target / "assets" / "standalone.html")
     shutil.copy2(ROOT / "scripts" / "agent_runtime.py", target / "runtime" / "agent_runtime.py")
     shutil.copy2(ROOT / "runtime" / "tools.json", target / "runtime" / "tools.json")
+    shutil.copy2(ROOT / "runtime" / "memory_hub.py", target / "runtime" / "memory_hub.py")
     shutil.copytree(ROOT / "runtime" / "references", target / "runtime" / "references", dirs_exist_ok=True, ignore=EXPORT_IGNORE)
     shutil.copytree(ROOT / "runtime" / "connectors", target / "runtime" / "connectors", dirs_exist_ok=True, ignore=EXPORT_IGNORE)
     shutil.copytree(ROOT / "schemas", target / "schemas", dirs_exist_ok=True, ignore=EXPORT_IGNORE)
@@ -62,6 +63,8 @@ python3 start.py --project /absolute/path/to/your-project
 ```
 
 也可以把本目录作为 Codex Plugin 安装。首次运行会在指定项目缺少最小上下文时创建 `HOME.md`、`PROJECT-CONTEXT.md`、`project.yaml` 和 `memory/`，不会覆盖已有内容。
+
+跨会话记忆按项目保存在项目目录的 `.workbench/memory-hub.db`；用户级偏好保存在 `~/.config/pm-workbench/user-memory.db`。通过 MCP 的 `pm_memory` 读取当前项目上下文、追加原始对话，或在用户确认后沉淀事实/决定。不同项目不会共享项目内容。
 
 网关 Token 只从 macOS Keychain service `pm-workbench-ai-gateway` / account `default` 或 `PM_WORKBENCH_API_KEY` 读取。
 """

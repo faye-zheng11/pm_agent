@@ -172,6 +172,9 @@ class Runner:
         local_assets = self.package_dir / "assets"
         self.assets_dir = local_assets if (local_assets / "standalone.html").is_file() else self.package_dir.parent / "_shared"
 
+    def memory(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        return self.runtime.memory_action(self.project_id, str(arguments.get("action") or "context"), arguments)
+
     def tool_handlers(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         if tavily_key():
@@ -253,10 +256,16 @@ class Runner:
         if bridge.is_file() and gateway_ready:
             def data(_task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
                 config=load_json(self.project_dir/"agent-config.json",{});binding=str((config.get("tool_overrides",{}).get("data_gateway") or {}).get("binding") or "")
+                action=str(arguments.get("action") or "query").strip()
+                if action not in {"list_projects", "query"}:raise RuntimeError("data_gateway.action 只能是 list_projects 或 query")
+                requested_binding=str(arguments.get("project_code") or "").strip()
+                if requested_binding:binding=requested_binding
                 sql=str(arguments.get("sql") or "").strip()
-                if not binding:raise RuntimeError("当前项目未配置 data_gateway binding")
-                if not re.match(r"(?is)^\s*(select|with)\b",sql) or re.search(r"(?is)\b(insert|update|delete|drop|alter|create|truncate)\b",sql):raise RuntimeError("data_gateway 只允许只读查询")
-                completed=subprocess.run([sys.executable,str(bridge),"--action","query","--project",binding,"--sql",sql],capture_output=True,text=True,timeout=120,check=False)
+                if action == "query" and not binding:raise RuntimeError("当前项目未配置 data_gateway binding；请先用 list_projects 查看可用数据项目，再请 PM 明确选择绑定")
+                if action == "query" and (not re.match(r"(?is)^\s*(select|with)\b",sql) or re.search(r"(?is)\b(insert|update|delete|drop|alter|create|truncate)\b",sql)):raise RuntimeError("data_gateway 只允许只读查询")
+                command=[sys.executable,str(bridge),"--action",action]
+                if action == "query": command += ["--project",binding,"--sql",sql]
+                completed=subprocess.run(command,capture_output=True,text=True,timeout=120,check=False)
                 value=json.loads(completed.stdout)
                 if completed.returncode!=0 or not value.get("ok"):raise RuntimeError(str(value.get("error") or "data_gateway 失败"))
                 return value
@@ -282,6 +291,8 @@ class Runner:
             project_id=self.project_id, agent_id=self.package["runtime_agent_id"], task_type=mode["task_type"],
             goal=goal, decision_to_support=decision, source_artifacts=payload.get("material_paths") or [],
             allowed_tools=allowed, authority_level="draft_write",
+            memory_source=str(payload.get("source") or "standalone"),
+            memory_session_id=str(payload.get("session_id") or ""),
         )
         worker = self.AgentWorker(self.runtime, gateway_model, self.ToolExecutor(self.runtime, active_handlers))
         worker.run_with_retries(task["id"], "standalone-worker")

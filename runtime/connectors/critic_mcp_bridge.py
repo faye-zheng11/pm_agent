@@ -9,23 +9,76 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 import tomllib
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 
-
-def load_server() -> StdioServerParameters:
+def _configured_server() -> dict[str, object]:
     config_path = Path.home() / ".codex" / "config.toml"
     try:
         config = tomllib.loads(config_path.read_text(encoding="utf-8"))
         item = config["mcp_servers"]["critic_gateway"]
     except (OSError, KeyError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeError("未找到可用的 critic_gateway MCP 配置") from exc
+    if not isinstance(item, dict):
+        raise RuntimeError("critic_gateway MCP 配置格式无效")
+    return item
+
+
+def _server_python() -> str:
+    """优先复用数据 Agent 注册时的 Python 环境，避免系统 Python 缺 mcp。"""
+    item = _configured_server()
+    command = str(item.get("command") or "").strip()
+    args = item.get("args") or []
+    candidates: list[Path] = []
+    direct = Path(command).expanduser()
+    if direct.is_file():
+        candidates.append(direct)
+    cwd = Path(str(item.get("cwd") or "")).expanduser()
+    if cwd.is_dir():
+        candidates.append(cwd / ".venv" / "bin" / "python")
+    if isinstance(args, list):
+        for value in args:
+            script = Path(str(value)).expanduser()
+            if script.suffix == ".py" and script.is_file():
+                candidates.extend((
+                    script.parent.parent / ".venv" / "bin" / "python",
+                    script.parent / ".venv" / "bin" / "python",
+                ))
+                break
+    resolved = shutil.which(command)
+    if resolved:
+        candidates.append(Path(resolved))
+    for candidate in candidates:
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return sys.executable
+
+
+def _reexec_with_server_python() -> None:
+    if importlib.util.find_spec("mcp") is not None:
+        return
+    candidate = _server_python()
+    if candidate != sys.executable:
+        os.execv(candidate, [candidate, *sys.argv])
+    raise RuntimeError(
+        "当前 Python 和 critic_gateway 注册环境都没有 mcp 依赖；请先安装数据 Agent，或重跑其安装脚本"
+    )
+
+
+_reexec_with_server_python()
+
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+
+def load_server() -> StdioServerParameters:
+    item = _configured_server()
     command = str(item.get("command") or "").strip()
     args = item.get("args") or []
     env = item.get("env") or {}

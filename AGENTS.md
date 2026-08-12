@@ -22,6 +22,14 @@
 - 已确认事实、假设、证据和决定分别进入 `memory/canon.md`、`memory/assumptions.md`、`memory/evidence.md`、`memory/decisions/`。
 - 没有可证伪 Bet 时，不把正式 PRD、设计和 Demo 标记为已批准交付。
 
+## 跨会话记忆
+
+- PM 入口先通过 `pm_memory` 读取当前项目上下文；项目级记忆只写入当前项目的 `.workbench/memory-hub.db`。
+- PM 对话、Agent 结果和工具观察以原始 turn 追加保存；原始讨论不自动升级为事实。
+- 用户明确确认的事实、决定或稳定偏好才沉淀为 active memory；未确认内容保持 candidate，后续上下文必须标明其状态。
+- 用户级偏好单独写入 `~/.config/pm-workbench/user-memory.db`，只能保存跨项目的工作习惯，不得写入任何项目业务内容。
+- 不同 AI 客户端只有在通过 PM Skill/MCP 的 `pm_memory` 入口工作时才能被统一记录；宿主平台未提供的后台聊天不会被伪造为已同步。
+
 ## Agent 执行
 
 - Agent 的唯一实现来源是 `agent-packages/<id>/agent-package.json` 及 Package 内协议、领域知识、Schema 和 Eval。

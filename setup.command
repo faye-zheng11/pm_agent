@@ -81,6 +81,11 @@ if command -v codex >/dev/null 2>&1; then
     codex plugin remove "$AGENT_ID" >/dev/null 2>&1 || true
     codex plugin add "$AGENT_ID@pm-ai-workbench" >/dev/null
   done
+  # 注册不带凭据的总控 MCP，让 pm 接待员在任意项目中都能读写项目记忆。
+  codex mcp remove pm-workbench >/dev/null 2>&1 || true
+  if ! codex mcp add pm-workbench -- python3 "$WORKBENCH_ROOT/scripts/workbench_mcp_server.py" >/dev/null; then
+    echo "警告：pm-workbench MCP 注册失败；四个 Agent Plugin 仍可使用，请稍后手动重跑安装脚本。"
+  fi
 else
   echo "未找到 Codex CLI：Skill 已就位，但四个 Agent Plugin 尚未注册。装好 Codex 后重跑本脚本即可。"
 fi

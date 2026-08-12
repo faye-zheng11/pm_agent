@@ -83,7 +83,7 @@
       "name": "Project Data Gateway",
       "risk": "read_only",
       "approval": "policy",
-      "description": "通过项目配置的数据网关执行只读业务查询。"
+      "description": "通过用户本机已注册的数据 Agent 执行只读业务查询；支持先列出数据项目，再按当前项目绑定查询。"
     },
     {
       "id": "persona_review",

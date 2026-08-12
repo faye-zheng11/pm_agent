@@ -36,6 +36,7 @@
 3. 注册四个 Codex Plugin（Agent）。
 4. 安装三个 Skill（`pmf-bet-brief`、`prd-writing`、`pm` 接待员）。
 5. 在 `~/.config/pm-workbench/runtime/browser-venv` 中安装 UX Reviewer 所需的 Playwright；浏览器优先使用本机 Google Chrome，其次使用 Chromium。两者都不可用时只降级 UX 浏览器走查，不影响其他 Agent。
+6. 注册不带凭据的 `pm-workbench` MCP，使 `pm` 接待员可以在项目目录中读取和追加跨会话记忆。
 
 HTML 工作台是本机使用入口，不随 GitHub 交付。GitHub 版本只交付 Agent、Skill、Workflow、运行时和安装器；在 Codex 中直接说 `pm` 是推荐用法。
 
@@ -100,6 +101,16 @@ pm
 
 仓库自带空白模板 `projects/_template`；**真实项目数据不入库**（已在 `.gitignore` 忽略），每个人的项目只存在自己本机。已确认事实、假设、证据、决定分别进 `memory/canon.md`、`memory/assumptions.md`、`memory/evidence.md`、`memory/decisions/`。
 
+### 跨会话 PM 记忆
+
+PM 的长期记忆分成三层：
+
+- 原始层：保存 PM 对话、Agent 输出和工具观察，便于跨窗口回看，不把闲聊强行改写成事实。
+- 项目层：保存当前项目的候选/已确认事实、假设、决定、问题和行动，数据库位于当前项目的 `.workbench/memory-hub.db`。
+- 用户层：只保存用户明确确认的跨项目工作习惯，位于 `~/.config/pm-workbench/user-memory.db`，不保存 101/102 的产品内容。
+
+在 Codex 或 Claude 中，`pm` 会先调用 `pm_memory context`，每轮通过 `append_turn` 追加原始对话；只有用户明确说“记住这个”“这是决定”“以后都按这个习惯”时，才提交并确认结构化记忆。没有接入 PM Skill/MCP 的普通聊天，宿主不会自动提供给 Agent，系统也不会声称它已经同步。
+
 ## 加 Claude（可选，和 Codex 共用一套）
 
 Skill 是跨工具标准：把 `skills/<name>` 拷到 `~/.claude/skills/`，在 `~/.claude.json` 里注册对应 MCP，即可在 Claude 里用同样的 `pm` 接待员和各能力。凭据同样走 Keychain，两边通用。
@@ -109,7 +120,9 @@ Skill 是跨工具标准：把 `skills/<name>` 拷到 `~/.claude/skills/`，在 
 - 公开 Web 与 Reddit：需要本机 `TAVILY_API_KEY` 或 `~/.config/pm-workbench/tavily-api-key`。
 - Playwright：由 `setup.command` 安装到独立 venv，并优先驱动本机 Google Chrome；浏览器不可用时 UX Reviewer 明确降级。
 - Figma：可选，需要连接和外部写入审批；不可用时只输出设计任务。
-- `critic_gateway`：可选，读取现有 Codex MCP 配置并强制只读、项目绑定。
+- `critic_gateway`：可选，复用用户本机已注册的数据 Agent。数据 Agent 需要提供 `list_projects`、`bind_project(project_code)` 和只读 `query(sql)` 三个 MCP 工具；工作台会先探测连通性，新项目可先列出数据项目，再由 PM 明确选择绑定，不会根据名称猜项目。
+- 数据调用边界：已有产品的留存、活跃、漏斗、付费、流失、行为基线或真实用户原话需要核验时，Agent 才会调用 `data_gateway`；新项目找方向、竞品和公开社媒研究默认走外部研究。数据 Agent 未注册、未绑定或查询失败时，结果标记为未核验，不会编造数字。
+- 下载者不需要安装本仓库之外的固定数据 Agent；如果其电脑上有符合上述 MCP 契约的数据 Agent，并在 `~/.codex/config.toml` 注册为 `critic_gateway`，PM Agent 就能复用。任意不同接口的数据 Agent 需要另写适配器，不能自动兼容。
 - 浏览器、运行日志和项目文件都不保存网关 Token；本机已登录 Codex 时复用 `~/.codex/auth.json`，不复制到项目。
 
 ## 独立导出
