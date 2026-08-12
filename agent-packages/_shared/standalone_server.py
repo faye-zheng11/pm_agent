@@ -188,6 +188,9 @@ class Runner:
                     elif source == "xiaohongshu" and not target:
                         if not query: raise RuntimeError("小红书 live 抓取需要 query 关键词")
                         command += ["xhs-live",query,"--limit",str(limit)];timeout=260;boundary="小红书 live 抓取：使用你已扫码登录的会话，仅个人研究用途、账号风险自负；会话失效会提示重新登录"
+                    elif source == "weibo" and not target:
+                        if not query: raise RuntimeError("微博 live 抓取需要 query 关键词")
+                        command += ["wb-live",query,"--limit",str(limit)];timeout=260;boundary="微博 live 抓取：使用你已扫码登录的会话，仅个人研究用途、账号风险自负；会话失效会提示重新登录"
                     elif source in {"x","xiaohongshu","mediacrawler"}:
                         allowed=set(_task.get("source_artifacts") or [])
                         if not target or target not in allowed: raise RuntimeError("X、或用导出文件方式的小红书，必须先在 source_artifacts 里授权该 JSON")
@@ -195,7 +198,7 @@ class Runner:
                         if not path.is_absolute(): path=(self.project_dir / target.removeprefix(f"projects/{self.project_dir.name}/")).resolve()
                         if not path.is_file() or path.suffix.lower() != ".json": raise RuntimeError("社媒导入文件必须是 JSON")
                         command += ["x" if source == "x" else "mediacrawler",str(path)]
-                    else: raise RuntimeError("source 只能是 reddit、x 或 xiaohongshu")
+                    else: raise RuntimeError("source 只能是 reddit、x、xiaohongshu 或 weibo")
                     completed=subprocess.run(command,capture_output=True,text=True,timeout=timeout,check=False)
                     if completed.returncode!=0:raise RuntimeError(completed.stderr.strip() or "社媒采集失败")
                     return {"source":source,"query":query,"posts":json.loads(completed.stdout),"login_boundary":boundary}
@@ -261,15 +264,15 @@ class Runner:
             def data(_task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
                 config=load_json(self.project_dir/"agent-config.json",{});binding=str((config.get("tool_overrides",{}).get("data_gateway") or {}).get("binding") or "")
                 action=str(arguments.get("action") or "query").strip()
-                if action not in {"list_projects", "query"}:raise RuntimeError("data_gateway.action 只能是 list_projects 或 query")
+                if action not in {"list_projects", "bind_project", "query"}:raise RuntimeError("data_gateway.action 只能是 list_projects、bind_project 或 query")
                 requested_binding=str(arguments.get("project_code") or "").strip()
                 if requested_binding:binding=requested_binding
                 sql=str(arguments.get("sql") or "").strip()
-                if action == "query" and not binding:raise RuntimeError("当前项目未配置 data_gateway binding；请先用 list_projects 查看可用数据项目，再请 PM 明确选择绑定")
+                if action in {"bind_project", "query"} and not binding:raise RuntimeError("当前项目未配置 data_gateway binding；请先用 list_projects 查看可用数据项目，再请 PM 明确选择 project_code")
                 if action == "query" and (not re.match(r"(?is)^\s*(select|with)\b",sql) or re.search(r"(?is)\b(insert|update|delete|drop|alter|create|truncate)\b",sql)):raise RuntimeError("data_gateway 只允许只读查询")
                 command=[sys.executable,str(bridge),"--action",action]
-                if action == "query": command += ["--project",binding,"--sql",sql]
-                completed=subprocess.run(command,capture_output=True,text=True,timeout=120,check=False)
+                if action in {"bind_project", "query"}: command += ["--project",binding,"--sql",sql]
+                completed=subprocess.run(command,capture_output=True,text=True,timeout=300,check=False)
                 value=json.loads(completed.stdout)
                 if completed.returncode!=0 or not value.get("ok"):raise RuntimeError(str(value.get("error") or "data_gateway 失败"))
                 return value

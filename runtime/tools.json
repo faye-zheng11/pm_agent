@@ -27,7 +27,7 @@
       "name": "Public Social Ingest",
       "risk": "read_only",
       "approval": "never",
-      "description": "采集公开 Reddit 搜索结果，或归一用户提供的 MediaCrawler / X 导出；统一输出带平台、URL、日期、互动与证据边界的帖子记录。"
+      "description": "采集公开 Reddit 搜索结果；用本机已扫码登录的会话 live 抓小红书/微博；或归一用户提供的 X / 导出 JSON。统一输出带平台、URL、日期、互动与证据边界的帖子记录（个人研究用途）。"
     },
     {
       "id": "signal_ledger",
@@ -83,7 +83,7 @@
       "name": "Project Data Gateway",
       "risk": "read_only",
       "approval": "policy",
-      "description": "通过用户本机已注册的数据 Agent 执行只读业务查询；支持先列出数据项目，再按当前项目绑定查询。"
+      "description": "调用用户本机官方 critic-analyze 数据 Agent；内部数据问题按 list_projects -> bind_project -> query 执行，并保留绑定项目、口径、SQL、水位和限制。"
     },
     {
       "id": "persona_review",

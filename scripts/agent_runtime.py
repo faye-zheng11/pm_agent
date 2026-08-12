@@ -2986,7 +2986,7 @@ class AgentWorker:
                 "search_arguments": {"query": "2-500 字符", "topic": "general|news", "time_range": "day|week|month|year|空", "max_results": "1-8"},
                 "extract_arguments": {"url": "公开 http(s) URL"},
             },
-            "social_ingest": {"arguments": {"source": "reddit|x|xiaohongshu", "query": "Reddit 或小红书的研究关键词", "path": "可选：source_artifacts 中已授权的导出 JSON", "limit": "1-20"}, "note": "Reddit 公开检索。小红书：source=xiaohongshu 且不带 path 时，用用户已扫码登录的本机会话 live 按关键词抓（个人研究用途；会话失效会返回 xhs_login_required 提示，不要伪装已抓）。X、或带 path 的小红书读用户授权导出。公开讨论默认是观察信号(B 级)，不等于真实需求。"},
+            "social_ingest": {"arguments": {"source": "reddit|xiaohongshu|weibo|x", "query": "研究关键词", "path": "可选：source_artifacts 中已授权的导出 JSON", "limit": "1-20"}, "note": "Reddit 公开检索。小红书(source=xiaohongshu)与微博(source=weibo)不带 path 时，用用户已扫码登录的本机会话 live 按关键词抓（个人研究用途；会话失效会返回 <平台>_login_required，不要伪装已抓）。X、或带 path 的小红书读用户授权导出。公开讨论默认是观察信号(B 级)，不等于真实需求。"},
             "signal_ledger": {
                 "actions": ["list", "upsert", "transition"],
                 "upsert_arguments": {"signal": {"id": "稳定 ID", "title": "标题", "url": "真实 URL", "status": "watching|candidate|converted|expired|rejected"}},
@@ -2997,10 +2997,11 @@ class AgentWorker:
             "demo_html": {"arguments": {"spec": "产品规格或产品想法；生成自包含移动 HTML Demo"}, "note": "必须标记为概念验证，不连接生产数据库。"},
             "persona_review": {"arguments": {"target": "已授权 HTML 路径", "persona": "唯粉|团粉|妈粉|事业粉|CP粉|颜粉|teen|海外粉"}, "note": "Synthetic 反应不能当真人证据。"},
             "data_gateway": {
-                "actions": ["list_projects", "query"],
+                "actions": ["list_projects", "bind_project", "query"],
                 "list_projects_arguments": {},
+                "bind_project_arguments": {"project_code": "必须是 PM 从 list_projects 选择并确认的数据项目代码，例如 IDOL101"},
                 "query_arguments": {"project_code": "PM 从 list_projects 选择的数据项目代码；已有绑定时可省略", "sql": "只读 SELECT / WITH 查询"},
-                "note": "这是当前用户本机注册的数据 Agent 的只读适配器。新项目或未绑定项目先调用 list_projects，再向 PM 确认数据项目代码；不要猜 IDOL 项目。只有现有产品的留存、活跃、漏斗、付费、流失、行为基线或真实用户原话会改变当前判断时才 query。纯新项目机会、竞品、公开社媒研究默认不查内部数据。返回结果必须保留绑定项目、SQL/口径和数据水位；不可用、未绑定或失败时标记未核验，不能编造数字。",
+                "note": "这是当前用户本机官方 critic-analyze 数据 Agent 的真实适配器，不是模型知识。涉及留存、活跃、漏斗、付费、流失、行为基线或真实用户原话时必须使用；先 list_projects，再 bind_project，再 query。纯新项目机会、竞品、公开社媒研究默认不查内部数据。每次返回必须保留绑定项目、SQL/口径和数据水位；不可用、未绑定或失败时标记未核验，不能编造数字。",
             },
             "finding_ledger": {"actions": ["list", "upsert", "transition"], "upsert_arguments": {"finding": "必须包含 id、review_subject、severity、issue、status=open|fixed|accepted_risk|obsolete"}, "transition_arguments": {"finding_id": "已有 Finding ID", "status": "fixed|accepted_risk|obsolete"}, "note": "只维护当前项目 Finding，复审不得静默关闭旧问题；没有 Finding ID 不得 transition。"},
             "artifact_store": {"action": "write_draft", "arguments": {"filename": "md|json|txt", "content": "草稿内容"}},
@@ -3097,9 +3098,9 @@ class AgentWorker:
             "区分 fact、evidence、assumption、inference、recommendation 和 decision_candidate。"
             "不能伪造工具执行、用户研究、数据查询或外部写入。\n\n"
             "【真实数据调用规则】\n"
-            "当任务涉及现有产品的留存、活跃、漏斗、付费、流失、行为基线、真实用户原话，或材料中出现需要核验的业务数字时，优先使用 data_gateway。"
+            "当任务涉及现有产品的留存、活跃、漏斗、付费、流失、行为基线、真实用户原话，或材料中出现需要核验的业务数字时，必须使用 data_gateway 这只真实数据 Agent 的手，而不是凭模型知识回答。"
             "当任务是新项目找方向、公开竞品、行业或社媒研究时，默认使用 web_research/social_ingest，不要因为 data_gateway 可用就强行查询。"
-            "若 data_gateway 未绑定，先调用 list_projects；拿到列表后用 request_input 请 PM 选择数据项目代码，后续 query 必须传 project_code。严禁根据项目名称或模型记忆猜绑定。"
+            "data_gateway 必须遵循 critic-analyze SOP：先 list_projects；项目代码不明确时用 request_input 请 PM 选择；明确后调用 bind_project，再 query。严禁根据项目名称或模型记忆猜绑定。数据 Agent 返回的 SQL、口径、水位和限制必须进入最终结果。"
             "任何数据结论都必须同时写清项目绑定、查询口径、时间水位和限制；工具失败就保留未核验状态。\n\n"
             "每一步只返回一个 JSON 对象，不要输出 JSON 之外的文字。协议如下：\n"
             '{"kind":"tool_call","tool":"project_memory","arguments":{"action":"read_file","path":"..."},"reason":"为什么需要"}\n'

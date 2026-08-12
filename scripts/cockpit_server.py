@@ -320,10 +320,10 @@ def critic_gateway_available() -> bool:
 
 def data_gateway(task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
     action = str(arguments.get("action") or "query").strip()
-    if action not in {"list_projects", "query"}:
-        raise ContractError("data_gateway.action 只能是 list_projects 或 query")
+    if action not in {"list_projects", "bind_project", "query"}:
+        raise ContractError("data_gateway.action 只能是 list_projects、bind_project 或 query")
     binding = ""
-    if action == "query":
+    if action in {"bind_project", "query"}:
         project = runtime().projects.resolve(task["project_id"])
         config = runtime().registry.project_config(project)
         binding = str((config.get("tool_overrides", {}).get("data_gateway") or {}).get("binding") or "").strip()
@@ -332,15 +332,18 @@ def data_gateway(task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, A
             binding = requested_binding
         if not binding:
             raise ContractError(
-                f"项目 {task['project_id']} 未配置 data_gateway binding；请先用 list_projects 查看可用数据项目，再请 PM 明确选择绑定"
+                f"项目 {task['project_id']} 未配置 data_gateway binding；请先用 list_projects 查看可用数据项目，再请 PM 明确选择 project_code"
             )
-    sql = str(arguments.get("sql") or "").strip()
+    sql = str(arguments.get("sql") or "").strip() if action == "query" else ""
     if action == "query" and (not re.match(r"(?is)^\s*(select|with)\b", sql) or re.search(r"(?is)\b(insert|update|delete|drop|alter|create|truncate)\b", sql)):
         raise ContractError("data_gateway 只允许 SELECT / WITH 只读查询")
     command = [os.environ.get("PYTHON", "python3"), str(ROOT / "runtime" / "connectors" / "critic_mcp_bridge.py"), "--action", action]
-    if action == "query":
+    if action in {"bind_project", "query"}:
         command += ["--project", binding, "--sql", sql]
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=120, check=False)
+    try:
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=300, check=False)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("critic_gateway 超过 300 秒未返回；请缩小时间范围或先做聚合查询") from exc
     try:
         value = json.loads(result.stdout)
     except json.JSONDecodeError as exc:

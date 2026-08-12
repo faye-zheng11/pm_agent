@@ -15,15 +15,39 @@ import os
 from pathlib import Path
 import shutil
 import sys
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10 and older: the fallback parser only reads this known MCP block.
+    tomllib = None
 
 
 def _configured_server() -> dict[str, object]:
     config_path = Path.home() / ".codex" / "config.toml"
     try:
-        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        raw = config_path.read_text(encoding="utf-8")
+        if tomllib is not None:
+            config = tomllib.loads(raw)
+        else:
+            # Keep the bridge usable on older system Python versions without
+            # adding a second TOML dependency to the workbench.
+            import re
+            match = re.search(r"(?ms)^\[mcp_servers\.critic_gateway\]\n(?P<body>.*?)(?=^\[|\Z)", raw)
+            env_match = re.search(r"(?ms)^\[mcp_servers\.critic_gateway\.env\]\n(?P<body>.*?)(?=^\[|\Z)", raw)
+            if not match:
+                raise KeyError("mcp_servers.critic_gateway")
+            def value(name: str, body: str) -> str:
+                found = re.search(rf"(?m)^{re.escape(name)}\s*=\s*\"([^\"]*)\"", body)
+                return found.group(1) if found else ""
+            body = match.group("body")
+            env_body = env_match.group("body") if env_match else ""
+            config = {"mcp_servers": {"critic_gateway": {
+                "command": value("command", body),
+                "args": [value("args", body)] if value("args", body) else [],
+                "env": {key: value(key, env_body) for key in ("GATEWAY_MYSQL_HOST", "GATEWAY_MYSQL_PORT", "GATEWAY_MYSQL_USER", "GATEWAY_MYSQL_PASS", "CRITIC_OPERATOR")},
+            }}}
         item = config["mcp_servers"]["critic_gateway"]
-    except (OSError, KeyError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, KeyError, ValueError, getattr(tomllib, "TOMLDecodeError", ValueError)) as exc:
         raise RuntimeError("未找到可用的 critic_gateway MCP 配置") from exc
     if not isinstance(item, dict):
         raise RuntimeError("critic_gateway MCP 配置格式无效")
@@ -109,21 +133,41 @@ async def invoke(action: str, project: str, sql: str) -> dict[str, object]:
             binding = text_content(bound)
             if "已绑定" not in binding:
                 raise RuntimeError(binding)
+            if action == "bind_project":
+                return {
+                    "ok": True,
+                    "action": action,
+                    "data_agent": "critic-analyze",
+                    "binding": binding,
+                    "project_code": project.upper(),
+                    "protocol": "list_projects -> bind_project -> query",
+                }
             queried = await session.call_tool("query", {"sql": sql})
             result = text_content(queried)
             if "已拒绝" in result or "执行错误" in result:
                 raise RuntimeError(result)
-            return {"ok": True, "action": action, "binding": binding, "result": result}
+            return {
+                "ok": True,
+                "action": action,
+                "data_agent": "critic-analyze",
+                "binding": binding,
+                "project_code": project.upper(),
+                "sql": sql,
+                "result": result,
+                "protocol": "list_projects -> bind_project -> query",
+            }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--action", choices=("list_projects", "query"), required=True)
+    parser.add_argument("--action", choices=("list_projects", "bind_project", "query"), required=True)
     parser.add_argument("--project", default="")
     parser.add_argument("--sql", default="")
     args = parser.parse_args()
-    if args.action == "query" and (not args.project.strip() or not args.sql.strip()):
-        parser.error("query 需要 --project 和 --sql")
+    if args.action in {"bind_project", "query"} and not args.project.strip():
+        parser.error(f"{args.action} 需要 --project")
+    if args.action == "query" and not args.sql.strip():
+        parser.error("query 需要 --sql")
     try:
         print(json.dumps(asyncio.run(invoke(args.action, args.project, args.sql)), ensure_ascii=False))
         return 0
