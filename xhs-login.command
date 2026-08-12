@@ -28,6 +28,15 @@ echo "· 安装依赖（首次较慢）…"
 ( cd "$MC" && uv sync >/dev/null 2>&1 ) || { echo "依赖安装失败"; exit 1; }
 ( cd "$MC" && uv run playwright install chromium >/dev/null 2>&1 ) || true
 
+# 3.1) 关闭 CDP 模式：默认为 True 会卡在等一个外部 Chrome(9222 端口)，
+#      改用它自带的 playwright 浏览器 + 持久化登录会话。
+python3 - "$MC/config/base_config.py" <<'PY'
+import re, sys, pathlib
+p = pathlib.Path(sys.argv[1]); t = p.read_text(encoding="utf-8")
+n = re.sub(r'(?m)^(ENABLE_CDP_MODE\s*=\s*)True', r'\1False', t)
+if n != t: p.write_text(n, encoding="utf-8"); print("· 已关闭 CDP 模式")
+PY
+
 # 4) 打开可见浏览器扫码登录（会话持久化到 xhs_user_data_dir，之后自动复用）
 echo
 echo ">> 即将打开浏览器。请用【小红书 App】扫码登录。"
