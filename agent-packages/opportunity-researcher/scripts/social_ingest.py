@@ -136,6 +136,40 @@ def source_wb_live(keyword, limit=15, timeout=220):
     if not posts: _login_or_no_result("wb", blob)
     return posts
 
+def _twscrape_db():
+    return _mediacrawler_dir().parent / "x-accounts.db"  # runtime/vendor/x-accounts.db（gitignore）
+
+def source_x_live(keyword, limit=15, timeout=120):
+    """真·live 抓 X(Twitter)：用 twscrape 已登录账号搜。需 PM 先用 x-login.command 配置 X 账号。
+    仅个人研究用途、账号风险自负。X 反爬最凶，登录常需 2FA/邮箱验证码，最不稳。"""
+    tw = shutil.which("twscrape") or os.path.expanduser("~/.local/bin/twscrape")
+    if not os.path.exists(tw):
+        raise SystemExit("x_not_installed：未安装 twscrape，先运行 x-login.command")
+    limit = min(max(int(limit), 1), 20)
+    cmd = [tw, "--db", str(_twscrape_db()), "search", keyword, "--limit", str(limit)]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise SystemExit("x_login_required：X 抓取超时；请确认 x-login.command 已成功登录账号")
+    blob = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    if "No active accounts" in blob or "no active account" in blob.lower():
+        raise SystemExit("x_login_required：没有可用的 X 账号，请运行 x-login.command 配置并登录你的 X 账号")
+    posts = []
+    for line in (proc.stdout or "").splitlines():
+        line = line.strip()
+        if not line.startswith("{"): continue
+        try: t = json.loads(line)
+        except Exception: continue
+        user = t.get("user") or {}
+        posts.append(normalize("x", "@" + str(user.get("username") or user.get("screen_name") or ""),
+            "", t.get("rawContent") or t.get("text") or t.get("content") or "",
+            (str(t.get("date") or ""))[:10], t.get("url") or "",
+            {"likes": t.get("likeCount"), "retweets": t.get("retweetCount"),
+             "replies": t.get("replyCount"), "views": t.get("viewCount")}, "twscrape-live"))
+    if not posts:
+        raise SystemExit("x_no_result：未抓到推文（无结果、账号被限或登录失效）：" + blob.strip()[-400:])
+    return posts
+
 def source_x(path):
     rows = json.load(open(path, encoding="utf-8"))
     if isinstance(rows, dict): rows = rows.get("data", [rows])
@@ -181,6 +215,9 @@ def main():
     elif src == "wb-live":
         q = sys.argv[2]; limit = int(sys.argv[sys.argv.index("--limit")+1]) if "--limit" in sys.argv else 15
         posts = source_wb_live(q, limit)
+    elif src == "x-live":
+        q = sys.argv[2]; limit = int(sys.argv[sys.argv.index("--limit")+1]) if "--limit" in sys.argv else 15
+        posts = source_x_live(q, limit)
     elif src == "x":
         posts = source_x(sys.argv[2])
     elif src == "manual":

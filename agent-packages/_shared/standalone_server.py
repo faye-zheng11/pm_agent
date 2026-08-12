@@ -191,6 +191,9 @@ class Runner:
                     elif source == "weibo" and not target:
                         if not query: raise RuntimeError("微博 live 抓取需要 query 关键词")
                         command += ["wb-live",query,"--limit",str(limit)];timeout=260;boundary="微博 live 抓取：使用你已扫码登录的会话，仅个人研究用途、账号风险自负；会话失效会提示重新登录"
+                    elif source == "x" and not target:
+                        if not query: raise RuntimeError("X live 抓取需要 query 关键词")
+                        command += ["x-live",query,"--limit",str(limit)];timeout=180;boundary="X live 抓取：使用你配置的 twscrape 账号，仅个人研究用途、账号风险自负；未配置或登录失效会提示 x-login"
                     elif source in {"x","xiaohongshu","mediacrawler"}:
                         allowed=set(_task.get("source_artifacts") or [])
                         if not target or target not in allowed: raise RuntimeError("X、或用导出文件方式的小红书，必须先在 source_artifacts 里授权该 JSON")

@@ -37,6 +37,7 @@
 - 运行时必须真实加载 Package 协议、领域知识和所需核心 Skill，不能只读取入口摘要。
 - 工具未连接、页面不可访问、数据无法核验时必须返回明确限制，不得声称已执行。
 - 所有执行保留项目、Agent、任务类型、工具、来源、产物、状态与 Trace。
+- 涉及内部真实数据时，必须实际调用官方 `critic-analyze` 数据 Agent 的 `critic_gateway`，按 `list_projects -> bind_project -> query` 执行；不能把本地 `independent-critic` 或模型知识当作数据 Agent。
 
 ## 证据与安全
 

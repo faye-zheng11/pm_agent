@@ -40,10 +40,11 @@ def _configured_server() -> dict[str, object]:
                 found = re.search(rf"(?m)^{re.escape(name)}\s*=\s*\"([^\"]*)\"", body)
                 return found.group(1) if found else ""
             body = match.group("body")
+            args_match = re.search(r"(?m)^args\s*=\s*\[\s*\"([^\"]*)\"\s*\]", body)
             env_body = env_match.group("body") if env_match else ""
             config = {"mcp_servers": {"critic_gateway": {
                 "command": value("command", body),
-                "args": [value("args", body)] if value("args", body) else [],
+                "args": [args_match.group(1)] if args_match else [],
                 "env": {key: value(key, env_body) for key in ("GATEWAY_MYSQL_HOST", "GATEWAY_MYSQL_PORT", "GATEWAY_MYSQL_USER", "GATEWAY_MYSQL_PASS", "CRITIC_OPERATOR")},
             }}}
         item = config["mcp_servers"]["critic_gateway"]

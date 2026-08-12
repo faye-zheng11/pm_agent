@@ -120,9 +120,9 @@ Skill 是跨工具标准：把 `skills/<name>` 拷到 `~/.claude/skills/`，在 
 - 公开 Web 与 Reddit：需要本机 `TAVILY_API_KEY` 或 `~/.config/pm-workbench/tavily-api-key`。
 - Playwright：由 `setup.command` 安装到独立 venv，并优先驱动本机 Google Chrome；浏览器不可用时 UX Reviewer 明确降级。
 - Figma：可选，需要连接和外部写入审批；不可用时只输出设计任务。
-- `critic_gateway`：可选，复用用户本机已注册的数据 Agent。数据 Agent 需要提供 `list_projects`、`bind_project(project_code)` 和只读 `query(sql)` 三个 MCP 工具；工作台会先探测连通性，新项目可先列出数据项目，再由 PM 明确选择绑定，不会根据名称猜项目。
-- 数据调用边界：已有产品的留存、活跃、漏斗、付费、流失、行为基线或真实用户原话需要核验时，Agent 才会调用 `data_gateway`；新项目找方向、竞品和公开社媒研究默认走外部研究。数据 Agent 未注册、未绑定或查询失败时，结果标记为未核验，不会编造数字。
-- 下载者不需要安装本仓库之外的固定数据 Agent；如果其电脑上有符合上述 MCP 契约的数据 Agent，并在 `~/.codex/config.toml` 注册为 `critic_gateway`，PM Agent 就能复用。任意不同接口的数据 Agent 需要另写适配器，不能自动兼容。
+- `critic_gateway`：复用官方 [oppaya-agent-critic](https://github.com/oppaya-app/oppaya-agent-critic) 的数据 Agent。PM Agent 遇到内部数据问题时，会实际调用它的三个 MCP 工具，严格按 `list_projects → bind_project(project_code) → query(sql)` 执行，并把绑定项目、SQL、口径、数据水位和限制带回分析；不是凭模型知识猜数字。
+- 数据调用边界：已有产品的留存、活跃、漏斗、付费、流失、行为基线或真实用户原话必须调用 `data_gateway`；新项目找方向、竞品和公开社媒研究默认走外部研究。数据 Agent 未注册、未绑定或查询失败时，结果标记为未核验，不会编造数字。
+- 本机统一安装：官方数据 Agent 只保留 `/Users/apple/develop/code/oppaya-agent-critic-github`（下载者使用自己的克隆路径），其 `.venv/bin/python` 同时作为 Codex/Claude 的 MCP server Python，避免旧目录和系统 Python 混用。完整数据分析 Skill 仍负责口径、知识索引、计算、出图和报告，PM Agent 负责把真实结果接回产品判断。
 - 浏览器、运行日志和项目文件都不保存网关 Token；本机已登录 Codex 时复用 `~/.codex/auth.json`，不复制到项目。
 
 ## 独立导出
