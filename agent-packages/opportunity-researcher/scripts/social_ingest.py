@@ -92,10 +92,12 @@ def _mc_scrape(platform, keyword, limit, timeout):
         if raw[:7].lower() == "cookie:": raw = raw[7:].strip()
         raw = raw.strip('"').strip("'")
         login = ["--lt", "cookie", "--cookies", raw]
+    # 默认只抓笔记/博文（不抓评论）：评论按 2 秒/条限速，会把单次抓取从 ~40 秒拖到 3+ 分钟，
+    # 使 researcher 预算内跑不完。评论是加分项、不是找信号的必需。
     cmd = [uv, "run", "python", "main.py", "--platform", platform, *login,
            "--type", "search", "--keywords", keyword, "--save_data_option", "json",
            "--save_data_path", str(outdir), "--crawler_max_notes_count", str(limit),
-           "--get_comment", "yes", "--get_sub_comment", "no", "--headless", "yes"]
+           "--get_comment", "no", "--get_sub_comment", "no", "--headless", "yes"]
     try:
         proc = subprocess.run(cmd, cwd=str(mc), capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
