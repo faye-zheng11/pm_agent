@@ -43,16 +43,23 @@ n = re.sub(r'(?m)^(ENABLE_CDP_MODE\s*=\s*)True', r'\1False', t)
 if n != t: p.write_text(n, encoding="utf-8"); print("· 已关闭 CDP 模式")
 PY
 
-# 4) 打开可见浏览器扫码登录（会话持久化到 <平台>_user_data_dir，之后自动复用）
-echo
-echo ">> 即将打开浏览器。请用【$NAME App】扫码登录。"
-echo ">> 登录后会试抓 2 条作为验证，然后即可关闭。"
-echo
+# 4) 登录：优先 cookie（存在 cookie 文件时，绕开扫码/验证码），否则扫码
+COOKIE_FILE="$ROOT/runtime/vendor/${PLAT}-cookie.txt"
 cd "$MC"
-uv run python main.py --platform "$PLAT" --lt qrcode --type search --keywords "kpop" \
-  --crawler_max_notes_count 2 --get_comment no --headless no \
-  --save_data_option json --save_data_path "$MC/data/_login_probe_$PLAT"
+if [[ -s "$COOKIE_FILE" ]]; then
+  echo "· 检测到 cookie 文件（$COOKIE_FILE），用 cookie 登录，无需扫码…"
+  COOKIE_STR="$(tr -d '\r\n' < "$COOKIE_FILE" | sed -e 's/^Cookie:[[:space:]]*//I' -e "s/^['\"]//" -e "s/['\"]$//")"
+  uv run python main.py --platform "$PLAT" --lt cookie --cookies "$COOKIE_STR" --type search --keywords "kpop" \
+    --crawler_max_notes_count 2 --get_comment no --headless yes \
+    --save_data_option json --save_data_path "$MC/data/_login_probe_$PLAT"
+else
+  echo ">> 即将打开浏览器。请用【$NAME App】扫码：二维码会用 macOS「预览」单独弹出（不是浏览器里那个表单），有约 10 分钟。"
+  echo ">> 若像微博这样被验证码卡住，改用 cookie 登录：把 cookie 存到 $COOKIE_FILE 再运行本文件（见 README/说明）。"
+  uv run python main.py --platform "$PLAT" --lt qrcode --type search --keywords "kpop" \
+    --crawler_max_notes_count 2 --get_comment no --headless no \
+    --save_data_option json --save_data_path "$MC/data/_login_probe_$PLAT"
+fi
 
 echo
 echo "✅ [$NAME] 登录会话已保存到本机。以后 researcher 会用它自动 live 抓 $NAME。"
-echo "   若日后提示 ${PLAT}_login_required，重新运行本文件（带同样平台参数）即可。"
+echo "   若日后提示 ${PLAT}_login_required，重新运行本文件即可。"

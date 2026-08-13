@@ -84,7 +84,15 @@ def _mc_scrape(platform, keyword, limit, timeout):
     outdir = mc / "data" / f"_live_{platform}"
     shutil.rmtree(outdir, ignore_errors=True); outdir.mkdir(parents=True, exist_ok=True)
     limit = min(max(int(limit), 1), 20)
-    cmd = [uv, "run", "python", "main.py", "--platform", platform, "--lt", "qrcode",
+    # 有 <platform>-cookie.txt 就用 cookie 登录（微博走这条，绕开扫码/验证码），否则用已扫码的持久化会话
+    login = ["--lt", "qrcode"]
+    cookie_file = mc.parent / f"{platform}-cookie.txt"
+    if cookie_file.is_file() and cookie_file.stat().st_size > 0:
+        raw = cookie_file.read_text(encoding="utf-8").strip()
+        if raw[:7].lower() == "cookie:": raw = raw[7:].strip()
+        raw = raw.strip('"').strip("'")
+        login = ["--lt", "cookie", "--cookies", raw]
+    cmd = [uv, "run", "python", "main.py", "--platform", platform, *login,
            "--type", "search", "--keywords", keyword, "--save_data_option", "json",
            "--save_data_path", str(outdir), "--crawler_max_notes_count", str(limit),
            "--get_comment", "yes", "--get_sub_comment", "no", "--headless", "yes"]
