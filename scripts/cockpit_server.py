@@ -192,16 +192,26 @@ def social_ingest(task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, 
     script = ROOT / "agent-packages" / "opportunity-researcher" / "scripts" / "social_ingest.py"
     command = [os.environ.get("PYTHON", "python3"), str(script)]
     query = str(arguments.get("query") or "").strip()
+    target = str(arguments.get("path") or "").strip()
+    timeout = 90
+    boundary = "仅处理公开 Reddit 或用户主动导出的材料；不接管账号登录"
     if source == "reddit":
         if len(query) < 2:
             raise ContractError("social_ingest.query 不能为空")
         limit = min(max(int(arguments.get("limit") or 8), 1), 20)
         command += ["reddit", query, "--limit", str(limit)]
+    elif source in {"xiaohongshu", "weibo", "x"} and not target:
+        if len(query) < 2:
+            raise ContractError("live 抓取需要 query 关键词")
+        limit = min(max(int(arguments.get("limit") or 8), 1), 20)
+        sub = {"xiaohongshu": "xhs-live", "weibo": "wb-live", "x": "x-live"}[source]
+        command += [sub, query, "--limit", str(limit)]
+        timeout = 260
+        boundary = f"{source} live 抓取：使用本机已登录会话/账号，仅个人研究用途、账号风险自负；未配置或失效会返回 <平台>_login_required，不伪装已抓"
     elif source in {"x", "xiaohongshu", "mediacrawler"}:
-        target = str(arguments.get("path") or "").strip()
         allowed = set(task.get("source_artifacts") or [])
         if not target or target not in allowed:
-            raise ContractError("X/小红书必须先上传导出文件，并把该文件作为任务材料授权给 Agent")
+            raise ContractError("用导出方式的 X/小红书必须先上传 JSON 并把该文件作为任务材料授权给 Agent")
         project = runtime().projects.resolve(task["project_id"])
         normalized = target
         prefix = f"projects/{project['path'].name}/"
@@ -212,14 +222,14 @@ def social_ingest(task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, 
             raise ContractError("社媒导入文件必须是任务已授权的 JSON 导出文件")
         command += ["x" if source == "x" else "mediacrawler", str(path)]
     else:
-        raise ContractError("social_ingest.source 只能是 reddit、x 或 xiaohongshu")
+        raise ContractError("social_ingest.source 只能是 reddit、xiaohongshu、weibo 或 x")
     result = subprocess.run(
         command,
-        cwd=ROOT, capture_output=True, text=True, timeout=90, check=False,
+        cwd=ROOT, capture_output=True, text=True, timeout=timeout, check=False,
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "社媒采集失败")
-    return {"source": source, "query": query, "posts": json.loads(result.stdout), "accessed_at": now_date(), "login_boundary": "仅处理公开 Reddit 或用户主动导出的 X/小红书材料；不接管账号登录"}
+    return {"source": source, "query": query, "posts": json.loads(result.stdout), "accessed_at": now_date(), "login_boundary": boundary}
 
 
 def demo_html(task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
