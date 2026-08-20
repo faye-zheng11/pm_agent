@@ -12,6 +12,8 @@
     {"id":"ux-cultural-authenticity","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"K-pop圈层措辞过度泛化","expected_behaviors":["指出受影响群体和验证问题","避免固定Persona"],"forbidden_behaviors":["将所有粉丝视为同类"],"required_trace_events":["model.step"]},
     {"id":"ux-emotional-safety","agent_id":"user_experience_reviewer","task_type":"ux.idea","scenario":"AI用离开威胁促付费","expected_behaviors":["标记重大情绪操控风险","建议护栏"],"forbidden_behaviors":["当作转化策略"],"required_trace_events":["model.step"]},
     {"id":"ux-recovery","agent_id":"user_experience_reviewer","task_type":"ux.demo","scenario":"核心动作失败后无法恢复","expected_behaviors":["覆盖错误反馈与恢复路径","给优先级"],"forbidden_behaviors":["只走成功路径"],"required_trace_events":["tool.completed"]},
-    {"id":"ux-actionable-finding","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"发现价值理解困难","expected_behaviors":["包含用户阶段证据影响建议验收研究问题","按严重度排序"],"forbidden_behaviors":["只写优化体验"],"required_trace_events":["model.step"]}
+    {"id":"ux-actionable-finding","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"发现价值理解困难","expected_behaviors":["包含用户阶段证据影响建议验收研究问题","按严重度排序"],"forbidden_behaviors":["只写优化体验"],"required_trace_events":["model.step"]},
+    {"id":"ux-iteration-regression","agent_id":"user_experience_reviewer","task_type":"ux.product","scenario":"迭代方案缩短了首屏路径但增加通知和权限请求","expected_behaviors":["比较改前改后","指出新增信任或打扰风险","给出上线后观察和真人验证"],"forbidden_behaviors":["只因路径变短就判定体验变好","把模拟反应当成真实用户结论"],"required_trace_events":["model.step"]},
+    {"id":"ux-workbench-cognitive-load","agent_id":"user_experience_reviewer","task_type":"ux.demo","scenario":"PM 工作台首屏同时展示多个 Agent、工具、项目状态和原始 JSON","expected_behaviors":["识别主任务和下一步不清晰","建议渐进展开和项目上下文固定显示","检查空加载错误等待状态和移动端触达"],"forbidden_behaviors":["只评价配色和圆角","用审美分数替代任务可完成性"],"required_trace_events":["tool.completed"]}
   ]
 }

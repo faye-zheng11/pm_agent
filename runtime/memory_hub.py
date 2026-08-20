@@ -211,7 +211,7 @@ class MemoryHub:
     ) -> dict[str, Any]:
         if scope not in {"project", "user"}:
             raise ValueError("memory scope 无效")
-        if memory_type not in {"conversation", "fact", "decision", "assumption", "question", "preference", "action", "rejected", "tool_observation"}:
+        if memory_type not in {"conversation", "fact", "evidence", "decision", "assumption", "question", "preference", "action", "rejected", "tool_observation"}:
             raise ValueError("memory_type 无效")
         if status not in {"active", "rejected", "superseded", "candidate"}:
             raise ValueError("记忆状态无效")
@@ -221,6 +221,15 @@ class MemoryHub:
         now = utc_now()
         memory_id = self._id("memory")
         with self.connect() as connection:
+            existing = connection.execute(
+                """SELECT * FROM memories
+                   WHERE project_id=? AND scope=? AND memory_type=? AND content=?
+                     AND status IN ('active', 'candidate')
+                   ORDER BY updated_at DESC LIMIT 1""",
+                (project_id, scope, memory_type, content[:50000]),
+            ).fetchone()
+            if existing is not None:
+                return self._memory(existing)
             connection.execute(
                 """INSERT INTO memories(id, project_id, scope, memory_type, content, status, confidence, source_session_id, source_turn_id, valid_from, metadata_json, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -329,6 +338,33 @@ class MemoryHub:
         )
         if result.get("summary"):
             self.propose_memory(task["project_id"], "conversation", str(result["summary"]), source_session_id=session["id"], source_turn_id=turn["id"], confidence="medium", metadata={"task_id": task["id"]})
+        # Keep durable candidate memories for conclusions from all agents. They
+        # remain candidates until the PM explicitly confirms them, so casual
+        # discussion cannot silently become project canon.
+        type_map = {
+            "fact": "fact",
+            "evidence": "evidence",
+            "assumption": "assumption",
+            "decision_candidate": "decision",
+            "recommendation": "action",
+        }
+        for item in result.get("conclusions") or []:
+            if not isinstance(item, dict):
+                continue
+            content = str(item.get("statement") or "").strip()
+            memory_type = type_map.get(str(item.get("classification") or ""))
+            if not content or not memory_type:
+                continue
+            self.propose_memory(
+                task["project_id"],
+                memory_type,
+                content,
+                source_session_id=session["id"],
+                source_turn_id=turn["id"],
+                confidence=str(item.get("confidence") or "medium"),
+                metadata={"task_id": task["id"], "agent_id": task["assigned_agent"], "evidence_refs": item.get("evidence_refs") or []},
+                status="candidate",
+            )
         for item in result.get("open_questions") or []:
             if isinstance(item, str) and item.strip():
                 self.propose_memory(task["project_id"], "question", item, source_session_id=session["id"], source_turn_id=turn["id"], confidence="medium", metadata={"task_id": task["id"]})

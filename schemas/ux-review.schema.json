@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Synthetic User Experience Review",
   "type": "object",
-  "required": ["review_mode", "synthetic_boundary", "personas", "journey", "experience_dimensions", "findings", "real_evidence_refs", "simulated_assumptions", "research_questions", "prioritized_changes", "unverified_visuals", "handoff_summary"],
+  "required": ["review_mode", "synthetic_boundary", "personas", "journey", "experience_dimensions", "findings", "real_evidence_refs", "simulated_assumptions", "research_questions", "prioritized_changes", "unverified_visuals", "handoff_summary", "frameworks_used"],
   "properties": {
     "review_mode": {"enum": ["idea", "product_plan", "prd", "screenshot", "figma", "html_demo"]},
     "synthetic_boundary": {"type": "string", "minLength": 20},
@@ -15,7 +15,10 @@
     "research_questions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "prioritized_changes": {"type": "array", "items": {"type": "object", "required": ["priority", "change", "reason"], "properties": {"priority": {"enum": ["now", "next", "later"]}, "change": {"type": "string"}, "reason": {"type": "string"}}, "additionalProperties": false}},
     "unverified_visuals": {"type": "array", "items": {"type": "string"}},
-    "handoff_summary": {"type": "string", "minLength": 1}
+    "handoff_summary": {"type": "string", "minLength": 1},
+    "iteration_comparison": {"type": "object", "required": ["what_changed", "what_is_fixed", "regressions", "post_release_signal", "rollback_trigger"], "properties": {"what_changed": {"type": "string"}, "what_is_fixed": {"type": "string"}, "regressions": {"type": "array", "items": {"type": "string"}}, "post_release_signal": {"type": "string"}, "rollback_trigger": {"type": "string"}}, "additionalProperties": false},
+    "frameworks_used": {"type": "array", "maxItems": 2, "items": {"type": "object", "required": ["id", "purpose", "input_basis", "output_used", "evidence_boundary"], "properties": {"id": {"enum": ["jtbd", "pain-solution-matrix", "user-journey-map", "mental-models", "elevator-pitch", "wardley-mapping"]}, "purpose": {"type": "string", "minLength": 1}, "input_basis": {"type": "string", "minLength": 1}, "output_used": {"type": "string", "minLength": 1}, "evidence_boundary": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+    "ui_quality_summary": {"type": "object", "required": ["task_clarity", "context_visibility", "progressive_disclosure", "responsive_accessibility", "visual_specificity"], "properties": {"task_clarity": {"enum": ["good", "risk", "unknown"]}, "context_visibility": {"enum": ["good", "risk", "unknown"]}, "progressive_disclosure": {"enum": ["good", "risk", "unknown"]}, "responsive_accessibility": {"enum": ["good", "risk", "unknown"]}, "visual_specificity": {"enum": ["good", "risk", "unknown"]}}, "additionalProperties": false}
   },
   "additionalProperties": false
 }

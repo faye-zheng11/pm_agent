@@ -3,11 +3,11 @@
   "id": "user-experience-reviewer",
   "runtime_agent_id": "user_experience_reviewer",
   "name": "用户试用",
-  "version": "2.0.0",
-  "mission": "用适合当前产品的模拟用户组真实走查想法、方案、PRD、Figma 或 HTML Demo，发现具体体验风险。",
+  "version": "2.3.0",
+  "mission": "用适合当前产品的模拟用户组走查新方案或迭代方案，找出用户会困惑、流失、不信任或无法完成任务的具体位置。",
   "modes": [
     {"id": "idea", "task_type": "ux.idea", "label": "评审想法", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 4, "max_handoffs": 1}},
-    {"id": "product_plan", "task_type": "ux.product", "label": "评审产品方案", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 4, "max_handoffs": 1}},
+    {"id": "product_plan", "task_type": "ux.product", "label": "评审产品方案 / 迭代", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 4, "max_handoffs": 1}},
     {"id": "prd", "task_type": "ux.prd", "label": "评审 PRD", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 5, "max_handoffs": 1}},
     {"id": "html_demo", "task_type": "ux.demo", "label": "试用 HTML Demo", "project_required": false, "budget": {"max_model_steps": 12, "max_tool_calls": 8, "max_handoffs": 1}},
     {"id": "figma", "task_type": "ux.figma", "label": "试用 Figma", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}}
@@ -17,7 +17,9 @@
     {"id": "target_users", "label": "目标用户", "type": "text", "required": true},
     {"id": "decision", "label": "评审要支持什么决定", "type": "textarea", "required": true},
     {"id": "materials", "label": "PRD、截图、Demo 或 Figma", "type": "files", "required": false},
-    {"id": "focus", "label": "最担心什么", "type": "textarea", "required": false}
+    {"id": "focus", "label": "最担心什么", "type": "textarea", "required": false},
+    {"id": "current_path", "label": "当前版本用户路径（迭代时可填写）", "type": "textarea", "required": false},
+    {"id": "proposed_change", "label": "本次改动（迭代时可填写）", "type": "textarea", "required": false}
   ],
   "outputs": ["模拟用户组", "六段旅程走查", "可复现体验 Finding", "修改优先级", "真人研究问题"],
   "protocols": [
@@ -28,17 +30,19 @@
   "domain_knowledge": [
     "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/domain-playbook.md",
     "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/fan-persona-library.md",
+    "runtime/references/framework-catalog.md",
     "runtime/references/kpop-ai-companion.md",
-    "runtime/references/stage-gating.md"
+    "runtime/references/stage-gating.md",
+    "runtime/references/ui-workbench-principles.md"
   ],
   "core_skills": [],
-  "tools": ["project_memory", "material_inspector", "browser_review", "persona_review", "artifact_store", "data_gateway", "design_connector"],
+  "tools": ["project_memory", "web_research", "social_ingest", "material_inspector", "browser_review", "persona_review", "evidence_ledger", "artifact_store", "data_gateway", "design_connector"],
   "output_schema": "schemas/ux-reviewer-result.schema.json",
   "ui": {"accent": "#9c4b61", "start_label": "让模拟用户试用", "result_sections": ["材料读取范围", "模拟用户", "六段旅程", "体验问题", "真人验证"]},
   "runtime": {
     "id": "user_experience_reviewer",
     "name": "User Experience Reviewer · 用户试用",
-    "mission": "在明确模拟边界的前提下实际读取并操作材料，发现理解、动机、情绪、信任、文化、无障碍、安全和退出问题。",
+    "mission": "在明确模拟边界的前提下实际读取并操作材料，判断新方案能否被用户理解，以及迭代是否真的修复问题、是否引入新的理解、信任、安全或退出风险。",
     "lifecycle_status": "core",
     "accepted_task_types": ["ux.idea", "ux.product", "ux.prd", "ux.demo", "ux.figma"],
     "required_context": ["review_subject", "target_users", "decision_to_support"],
@@ -50,10 +54,12 @@
     "knowledge_assets": [
       "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/domain-playbook.md",
       "agent-packages/user-experience-reviewer/skills/user-experience-reviewer/references/fan-persona-library.md",
+      "runtime/references/framework-catalog.md",
       "runtime/references/kpop-ai-companion.md",
-      "runtime/references/stage-gating.md"
+      "runtime/references/stage-gating.md",
+      "runtime/references/ui-workbench-principles.md"
     ],
-    "allowed_tools": ["project_memory", "material_inspector", "browser_review", "persona_review", "artifact_store", "data_gateway", "design_connector"],
+    "allowed_tools": ["project_memory", "web_research", "social_ingest", "material_inspector", "browser_review", "persona_review", "evidence_ledger", "artifact_store", "data_gateway", "design_connector"],
     "output_schema": "schemas/ux-reviewer-result.schema.json",
     "authority": {
       "can": ["生成情境化模拟用户组", "实际读取与点击授权材料", "走查桌面与手机路径", "提出修改和真人研究问题"],
@@ -72,6 +78,7 @@
       {"id": "synthetic_boundary", "description": "模拟反应始终标为假设", "required": true},
       {"id": "journey_coverage", "description": "覆盖进入、理解、尝试、反馈、复访和退出", "required": true},
       {"id": "material_readback", "description": "视觉结论可追溯到实际读取材料", "required": true},
+      {"id": "provenance_ledger", "description": "真实材料与外部来源已记录来源、读取范围和限制", "required": true},
       {"id": "interaction_trace", "description": "Demo 记录实际点击、视口、复现和失败路径；降级明确", "required": true},
       {"id": "state_accessibility", "description": "状态覆盖、响应式与无障碍风险已检查", "required": true},
       {"id": "actionability", "description": "重要问题有影响、修改、验收和真人验证问题", "required": true}

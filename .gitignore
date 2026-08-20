@@ -19,6 +19,7 @@ projects/*
 # ── HTML 工作台：仅本机使用，不随仓库分发 ──
 pm-workbench.html
 start.command
+assets/pm-rabbit-states.png
 
 # ── 过期报告 / 缓存 / 系统文件 ──
 EVAL-SMOKE-REPORT.md

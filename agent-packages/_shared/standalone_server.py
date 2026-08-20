@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import ssl
 import subprocess
 import sys
@@ -34,6 +35,43 @@ def load_json(path: Path, default: Any) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return default
+
+
+def normalize_material_paths(project_dir: Path, values: Any) -> list[str]:
+    """Make standalone-package material inputs project-relative and authorized."""
+    if not isinstance(values, list):
+        raise ValueError("material_paths 必须是字符串数组")
+    base = project_dir.resolve()
+    normalized: list[str] = []
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("material_paths 只能包含非空字符串")
+        item = value.strip()
+        if item.startswith(("http://", "https://")):
+            normalized.append(item)
+            continue
+        candidate = Path(item).expanduser()
+        if candidate.is_absolute():
+            resolved = candidate.resolve()
+            try:
+                relative = resolved.relative_to(base).as_posix()
+            except ValueError:
+                if not resolved.is_file():
+                    raise ValueError(f"外部材料不存在或不是文件: {item}")
+                digest = hashlib.sha256(
+                    f"{resolved}:{resolved.stat().st_size}:{resolved.stat().st_mtime_ns}".encode("utf-8")
+                ).hexdigest()[:12]
+                upload_dir = base / ".workbench" / "uploads"
+                upload_dir.mkdir(parents=True, exist_ok=True)
+                target = upload_dir / f"codex-{digest}-{resolved.name}"
+                if not target.exists():
+                    shutil.copy2(resolved, target)
+                relative = target.relative_to(base).as_posix()
+            normalized.append(relative)
+            continue
+        prefix = f"projects/{base.name}/"
+        normalized.append(item[len(prefix):] if item.startswith(prefix) else item)
+    return list(dict.fromkeys(normalized))
 
 
 def keychain_token() -> str:
@@ -179,7 +217,7 @@ class Runner:
         result: dict[str, Any] = {}
         if tavily_key():
             result["web_research"] = web_research
-            if (self.package_dir / "scripts" / "social_ingest.py").is_file():
+        if (self.package_dir / "scripts" / "social_ingest.py").is_file():
                 def social(_task: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
                     source=str(arguments.get("source") or "reddit");query=str(arguments.get("query") or "").strip();limit=min(max(int(arguments.get("limit") or 8),1),20)
                     command=[sys.executable,str(self.package_dir/"scripts"/"social_ingest.py")];timeout=90;boundary="只读取公开 Reddit 或用户主动导出的材料"
@@ -294,12 +332,13 @@ class Runner:
         goal = "\n".join(f"{key}: {value}" for key, value in inputs.items() if str(value).strip())
         if not goal:
             raise ValueError("请至少填写一项任务信息")
-        local_tools = {"project_memory", "artifact_store", "signal_ledger", "material_inspector", "browser_review", "finding_ledger", "demo_builder"}
+        local_tools = {"project_memory", "artifact_store", "signal_ledger", "evidence_ledger", "material_inspector", "browser_review", "finding_ledger", "demo_builder"}
         active_handlers = self.tool_handlers()
         allowed = [tool for tool in self.package["runtime"]["allowed_tools"] if tool in local_tools or tool in active_handlers]
         task, _ = self.runtime.create_task(
             project_id=self.project_id, agent_id=self.package["runtime_agent_id"], task_type=mode["task_type"],
-            goal=goal, decision_to_support=decision, source_artifacts=payload.get("material_paths") or [],
+            goal=goal, decision_to_support=decision,
+            source_artifacts=normalize_material_paths(self.project_dir, payload.get("material_paths") or []),
             allowed_tools=allowed, authority_level="draft_write",
             memory_source=str(payload.get("source") or "standalone"),
             memory_session_id=str(payload.get("session_id") or ""),

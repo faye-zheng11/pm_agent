@@ -1,6 +1,6 @@
 {
   "name": "opportunity-researcher",
-  "version": "2.0.0",
+  "version": "2.3.0",
   "description": "从公开来源发现可回溯、可验证的产品机会，并严格区分事实、推断和证据不足。",
   "author": {
     "name": "PM AI Workbench"

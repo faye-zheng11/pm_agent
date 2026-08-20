@@ -3,7 +3,7 @@
   "id": "opportunity-researcher",
   "runtime_agent_id": "opportunity_researcher",
   "name": "找机会",
-  "version": "2.0.0",
+  "version": "2.3.0",
   "mission": "从公开用户内容、社区、竞品、应用商店和行业资料中发现有来源、可验证、可转成产品行动的机会。",
   "modes": [
     {"id": "casual_scan", "task_type": "opportunity.scan", "label": "随便看看", "project_required": false, "budget": {"max_model_steps": 12, "max_tool_calls": 6, "max_handoffs": 1}},
@@ -25,11 +25,12 @@
   ],
   "domain_knowledge": [
     "agent-packages/opportunity-researcher/skills/opportunity-researcher/references/domain-playbook.md",
+    "runtime/references/framework-catalog.md",
     "runtime/references/kpop-ai-companion.md",
     "runtime/references/stage-gating.md"
   ],
   "core_skills": [],
-  "tools": ["web_research", "social_ingest", "project_memory", "signal_ledger", "artifact_store", "data_gateway"],
+  "tools": ["web_research", "social_ingest", "project_memory", "signal_ledger", "evidence_ledger", "artifact_store", "data_gateway"],
   "output_schema": "schemas/opportunity-result.schema.json",
   "ui": {"accent": "#16735f", "start_label": "开始寻找机会", "result_sections": ["机会信号", "来源与限制", "可测试想法", "下一步"]},
   "runtime": {
@@ -45,10 +46,11 @@
     ],
     "knowledge_assets": [
       "agent-packages/opportunity-researcher/skills/opportunity-researcher/references/domain-playbook.md",
+      "runtime/references/framework-catalog.md",
       "runtime/references/kpop-ai-companion.md",
       "runtime/references/stage-gating.md"
     ],
-    "allowed_tools": ["project_memory", "web_research", "social_ingest", "signal_ledger", "artifact_store", "data_gateway"],
+    "allowed_tools": ["project_memory", "web_research", "social_ingest", "signal_ledger", "evidence_ledger", "artifact_store", "data_gateway"],
     "output_schema": "schemas/opportunity-result.schema.json",
     "authority": {
       "can": ["递归检索公开网页", "回读与交叉核验原文", "维护机会信号生命周期", "形成产品机会交接包"],
@@ -68,6 +70,7 @@
       {"id": "original_readback", "description": "关键来源已回读正文而非只看搜索摘要", "required": true},
       {"id": "triangulation", "description": "高优先信号完成多源交叉或明确单源限制", "required": true},
       {"id": "claim_boundary", "description": "事实、推断、假设与证据不足分开", "required": true},
+      {"id": "provenance_ledger", "description": "关键来源与主张已写入项目证据台账并可相互追溯", "required": true},
       {"id": "ledger_lifecycle", "description": "完成去重、过期与转入状态检查", "required": true},
       {"id": "actionability", "description": "信号包含行为、替代和最快验证", "required": true}
     ],

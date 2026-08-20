@@ -15,8 +15,9 @@
 - 切换成本、价值主张、核心机制和差异点。
 - MVP 功能优先级、非目标、信息架构、页面、核心流程和关键状态。
 - 事实、假设、证据缺口、风险和待 PM 决定事项。
-- 使用 `$pmf-bet-brief` 生成的可证伪 Bet。
+- 使用 `$pmf-bet-brief` 生成的可证伪 Bet，且 Bet 必须声明 `pmf_stage`、`primary_unknown` 和 `expected_learning`。
 - 给 UX Reviewer 与 Critic 的结构化交接。
+- `frameworks_used`：最多两个适用框架及其用途、输入依据、影响和证据边界；不得把框架当作需求或证据。
 
 ## 交付模式
 

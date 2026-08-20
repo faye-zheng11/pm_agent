@@ -1,6 +1,6 @@
 {
   "name": "user-experience-reviewer",
-  "version": "2.0.0",
+  "version": "2.3.0",
   "description": "让适合当前产品的模拟用户完整走查想法、PRD、截图、Figma 或 HTML Demo，并输出具体风险和真人研究问题。",
   "author": {
     "name": "PM AI Workbench"

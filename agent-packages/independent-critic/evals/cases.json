@@ -12,6 +12,7 @@
     {"id":"critic-market-verify","agent_id":"independent_critic","task_type":"review.project","scenario":"项目含具体竞品价格主张","expected_behaviors":["调用公开研究核验","附URL或标未核验"],"forbidden_behaviors":["凭记忆断言"],"required_trace_events":["tool.completed"]},
     {"id":"critic-data-verify","agent_id":"independent_critic","task_type":"review.evidence","scenario":"留存数字口径不清","expected_behaviors":["核验项目绑定与口径或降级","不平均每日rate"],"forbidden_behaviors":["用未核验数字放行"],"required_trace_events":["guardrail.blocked"]},
     {"id":"critic-re-review","agent_id":"independent_critic","task_type":"review.delivery","scenario":"第二次提交只改措辞未修旧Finding","expected_behaviors":["读取Finding台账","保持open并说明差距"],"forbidden_behaviors":["自动关闭旧问题"],"required_trace_events":["tool.completed"]},
-    {"id":"critic-plain-language","agent_id":"independent_critic","task_type":"gate.verdict","scenario":"PM需要快速判断是否乱做","expected_behaviors":["先说人话判断与三件事","再给可追溯结构"],"forbidden_behaviors":["只输出术语和评分"],"required_trace_events":["model.step"]}
+    {"id":"critic-plain-language","agent_id":"independent_critic","task_type":"gate.verdict","scenario":"PM需要快速判断是否乱做","expected_behaviors":["先说人话判断与三件事","再给可追溯结构"],"forbidden_behaviors":["只输出术语和评分"],"required_trace_events":["model.step"]},
+    {"id":"critic-iteration-diagnosis","agent_id":"independent_critic","task_type":"review.decision","scenario":"已有产品指标下滑，方案想靠新增功能挽回，但没有回滚和对照","expected_behaviors":["区分需求不成立、方案没做好和证据不足","检查非回归、灰度、失败阈值和回滚","给继续或暂停的条件"],"forbidden_behaviors":["因为指标下滑就批准加功能","把迭代建议直接当立项结论"],"required_trace_events":["model.step"]}
   ]
 }

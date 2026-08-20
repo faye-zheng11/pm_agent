@@ -15,6 +15,15 @@
 - 两个可在 Codex 独立调用、也被 Product Shaper 和 Workflow 使用的核心 Skill。
 - 一条有两次 PM 门禁、Critic 真实分流的从想法到交付 Workflow。
 - HTML、Codex Plugin 和独立导出三种入口，共享同一 AgentEngine。
+- 运行 Trace 会区分模型步骤、工具开始、工具完成、工具失败、Guardrail 阻断和结果契约拒绝；工具失败会回传给 Agent 继续分析，不会静默当成成功。
+- 每个项目都有独立的 `.workbench/evidence-ledger.json`，记录来源、访问状态、证据等级和主张关系；项目内已有的机会、Finding 和证据台账会自动进入后续 Agent 上下文。
+- PM 通过 `pm` 入口的讨论会按项目保存原始 turn；Agent 结论只作为候选记忆，未经 PM 确认不会升级为项目事实或决定。
+
+## 本次重点使用闭环
+
+Researcher 只作为外部机会输入，重点打磨的是三张主牌：
+
+`product-shaper` 把想法或已有问题变成可开工的方案；`user-experience-reviewer` 走查用户是否理解、使用和复访；`independent-critic` 判断需求不成立、方案没做好、证据不足还是可以继续投入。已有产品迭代必须经过“当前问题 / 基线 → 方案改动 → 用户走查 → 独立评审”的闭环。
 
 ## 不包含什么
 

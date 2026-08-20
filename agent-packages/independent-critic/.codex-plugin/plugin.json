@@ -1,6 +1,6 @@
 {
   "name": "independent-critic",
-  "version": "2.0.0",
+  "version": "2.3.0",
   "description": "独立审查产品想法、判断、PRD、体验、Demo 或整个项目，给出可做、不可做、优化路径与质量门结论。",
   "author": {
     "name": "PM AI Workbench"

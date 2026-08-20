@@ -2,9 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "PMF Bet Brief",
   "type": "object",
-  "required": ["bet_status", "hypothesis", "target_user", "uncertainties", "experiment", "signals", "decision_rules", "kill_conditions", "next_review"],
+  "required": ["bet_status", "pmf_stage", "primary_unknown", "expected_learning", "hypothesis", "target_user", "uncertainties", "experiment", "signals", "decision_rules", "kill_conditions", "next_review"],
   "properties": {
     "bet_status": {"enum": ["draft", "ready", "running", "concluded"]},
+    "pmf_stage": {"enum": ["problem_signal", "solution_validation", "repeat_value", "business_model", "growth_readiness"]},
+    "primary_unknown": {"enum": ["problem", "target_user", "solution", "repeat_value", "business_model", "growth"]},
+    "expected_learning": {"type": "string", "minLength": 1},
     "hypothesis": {"type": "string", "minLength": 30},
     "target_user": {"type": "object"},
     "context": {"type": "string"},

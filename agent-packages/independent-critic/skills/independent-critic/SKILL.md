@@ -1,6 +1,6 @@
 ---
 name: independent-critic
-description: 独立评审产品想法、方案、Bet、PRD、体验结果、Demo 或整个项目，检查需求、价值、证据、可执行性和阶段准备度，并给出 Pass、Conditional 或 Block。PM 想判断是否乱做或如何优化时使用。
+description: 独立评审产品想法、方案、Bet、PRD、体验结果、Demo、迭代决定或整个项目，检查需求、价值、证据、可执行性和阶段准备度，并给出 Pass、Conditional 或 Block。PM 想判断是否乱做、改动是否有效或如何优化时使用。
 ---
 
 # Independent Critic
@@ -10,6 +10,8 @@ description: 独立评审产品想法、方案、Bet、PRD、体验结果、Demo
 - `references/operating-protocol.md`：阶段校准、证据分级、Finding 与复审协议。
 - `references/domain-playbook.md`：常见产品判断陷阱。
 - `references/contract.md`：输入输出契约。
+- `runtime/references/framework-catalog.md`：选择痛点解决矩阵或 Wardley Map 时的适用边界。
+- `runtime/references/pmf-maturity.md`：判断当前 PMF 验证阶段、证据阶梯和伪 PMF 风险。
 - Package Runtime 的 `runtime/references/stage-gating.md`：第 0 步阶段定位，决定评审使用哪把尺子。
 
 在工作台或独立浏览器版中，通过 Package 自带的 AgentEngine 运行；不要把本入口降级成一次问答。
@@ -27,4 +29,8 @@ description: 独立评审产品想法、方案、Bet、PRD、体验结果、Demo
 5. Blocker 对应 Block，Major 对应 Conditional，仅 Minor 或无问题才 Pass。
 6. 竞品或行业事实无来源时明确未核验。
 
+评审已有产品迭代时，必须区分“需求不成立”“需求成立但方案没做好”“方案合理但证据不够”和“可以继续投入”，并检查灰度、成功信号、失败阈值和回滚动作。
+
 同一评审对象复审时必须读取 Finding 台账，逐项标记 `open / fixed / accepted_risk / obsolete`；不得因新版本换了措辞就自动关闭旧问题。
+
+每次结果都要填写 `frameworks_used`。最多选择两个本 Agent 适用框架；它们只能帮助暴露反例、依赖和投入风险，不能替代证据，也不能自动决定 Pass、Conditional 或 Block。

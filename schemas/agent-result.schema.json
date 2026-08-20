@@ -72,7 +72,20 @@
       "properties": {
         "skills": {"type": "array", "items": {"type": "string"}},
         "tools": {"type": "array", "items": {"type": "string"}},
-        "source_artifacts": {"type": "array", "items": {"type": "string"}}
+        "source_artifacts": {"type": "array", "items": {"type": "string"}},
+        "runtime": {
+          "type": "object",
+          "required": ["task_id", "model_steps", "tool_calls", "tools_completed", "tool_failures", "event_count"],
+          "properties": {
+            "task_id": {"type": "string"},
+            "model_steps": {"type": "integer", "minimum": 0},
+            "tool_calls": {"type": "integer", "minimum": 0},
+            "tools_completed": {"type": "array", "items": {"type": "string"}},
+            "tool_failures": {"type": "array", "items": {"type": "object", "required": ["tool", "reason"], "properties": {"tool": {"type": "string"}, "reason": {"type": "string"}}, "additionalProperties": false}},
+            "event_count": {"type": "integer", "minimum": 0}
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     }

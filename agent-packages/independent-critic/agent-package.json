@@ -3,11 +3,11 @@
   "id": "independent-critic",
   "runtime_agent_id": "independent_critic",
   "name": "独立评审",
-  "version": "2.0.0",
-  "mission": "用所有人都听得懂的话独立判断产品是否值得继续、哪里可做、哪里不可做、怎么优化，以及当前材料是否足以进入下一步。",
+  "version": "2.3.0",
+  "mission": "用所有人都听得懂的话独立判断产品是否值得继续、哪里可做、哪里不可做，以及一次迭代到底是在解决问题还是在制造新的复杂度。",
   "modes": [
     {"id": "quick_review", "task_type": "gate.verdict", "label": "快速评审", "project_required": false, "budget": {"max_model_steps": 8, "max_tool_calls": 4, "max_handoffs": 1}},
-    {"id": "decision_review", "task_type": "review.decision", "label": "评审产品判断", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}},
+    {"id": "decision_review", "task_type": "review.decision", "label": "评审产品判断 / 迭代决定", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}},
     {"id": "experience_review", "task_type": "review.experience", "label": "评审体验结果", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}},
     {"id": "definition_review", "task_type": "review.definition", "label": "评审 PRD", "project_required": false, "budget": {"max_model_steps": 10, "max_tool_calls": 6, "max_handoffs": 1}},
     {"id": "delivery_review", "task_type": "review.delivery", "label": "评审交付", "project_required": false, "budget": {"max_model_steps": 12, "max_tool_calls": 8, "max_handoffs": 1}},
@@ -18,7 +18,10 @@
     {"id": "decision", "label": "这次评审要支持什么决定", "type": "textarea", "required": true},
     {"id": "materials", "label": "相关材料", "type": "files", "required": false},
     {"id": "focus", "label": "重点检查", "type": "textarea", "required": false},
-    {"id": "verify_market", "label": "核验行业与竞品", "type": "boolean", "required": false}
+    {"id": "verify_market", "label": "核验行业与竞品", "type": "boolean", "required": false},
+    {"id": "current_version", "label": "当前产品版本（迭代时可填写）", "type": "text", "required": false},
+    {"id": "baseline", "label": "当前基线或已知问题（迭代时可填写）", "type": "textarea", "required": false},
+    {"id": "rollout_plan", "label": "灰度、成功信号和回滚（迭代时可填写）", "type": "textarea", "required": false}
   ],
   "outputs": ["一句话判断", "需求/价值/执行/阶段诊断", "证据与反例", "Finding 台账", "Pass / Conditional / Block"],
   "protocols": [
@@ -27,17 +30,19 @@
   ],
   "domain_knowledge": [
     "agent-packages/independent-critic/skills/independent-critic/references/domain-playbook.md",
+    "runtime/references/framework-catalog.md",
+    "runtime/references/pmf-maturity.md",
     "runtime/references/kpop-ai-companion.md",
     "runtime/references/stage-gating.md"
   ],
   "core_skills": [],
-  "tools": ["project_memory", "material_inspector", "web_research", "artifact_store", "finding_ledger", "data_gateway"],
+  "tools": ["project_memory", "material_inspector", "web_research", "social_ingest", "evidence_ledger", "artifact_store", "finding_ledger", "data_gateway"],
   "output_schema": "schemas/critic-result.schema.json",
   "ui": {"accent": "#b33a3a", "start_label": "开始独立评审", "result_sections": ["一句话判断", "四维诊断", "证据与反例", "可做与不可做", "复审条件"]},
   "runtime": {
     "id": "independent_critic",
     "name": "Independent Critic · 独立评审",
-    "mission": "按阶段校准证据门槛，审查需求、价值、执行和准备度，识别假进展与自我确认，并维护可复审 Finding。",
+    "mission": "按阶段校准证据门槛，审查需求、价值、执行和准备度；对新产品判断是否值得开工，对迭代判断是否真的解决问题，并维护可复审 Finding。",
     "lifecycle_status": "core",
     "accepted_task_types": ["review.evidence", "review.decision", "review.definition", "review.experience", "review.delivery", "review.project", "gate.verdict"],
     "required_context": ["review_subject", "decision_to_support", "project_stage"],
@@ -47,10 +52,12 @@
     ],
     "knowledge_assets": [
       "agent-packages/independent-critic/skills/independent-critic/references/domain-playbook.md",
+      "runtime/references/framework-catalog.md",
+      "runtime/references/pmf-maturity.md",
       "runtime/references/kpop-ai-companion.md",
       "runtime/references/stage-gating.md"
     ],
-    "allowed_tools": ["project_memory", "material_inspector", "web_research", "artifact_store", "finding_ledger", "data_gateway"],
+    "allowed_tools": ["project_memory", "material_inspector", "web_research", "social_ingest", "evidence_ledger", "artifact_store", "finding_ledger", "data_gateway"],
     "output_schema": "schemas/critic-result.schema.json",
     "authority": {
       "can": ["诊断单份材料或整个项目", "核验行业、竞品和数据主张", "维护 Finding 与复审状态", "给出可执行质量门结论"],
@@ -72,6 +79,7 @@
       {"id": "independence", "description": "不改原产物且不是原任务作者", "required": true},
       {"id": "stage_calibration", "description": "按探索、验证、扩张或维护选择尺度", "required": true},
       {"id": "claim_evidence_map", "description": "主张有证据等级、来源和未核验标记", "required": true},
+      {"id": "provenance_ledger", "description": "关键主张可回溯到来源台账、数据绑定或用户材料", "required": true},
       {"id": "counterexample", "description": "给出最强反例和改变判断所需证据", "required": true},
       {"id": "verdict_basis", "description": "判决与 Finding 严重度一致且敢于 Pass", "required": true},
       {"id": "finding_lifecycle", "description": "复审时逐项核对 Finding 状态", "required": true},

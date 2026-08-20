@@ -117,10 +117,12 @@ def load_server() -> StdioServerParameters:
 
 
 def text_content(result) -> str:
-    if getattr(result, "isError", False):
-        raise RuntimeError("critic_gateway 返回错误")
     parts = [block.text for block in result.content if getattr(block, "type", "") == "text"]
-    return "\n".join(parts)
+    text = "\n".join(parts).strip()
+    if getattr(result, "isError", False):
+        detail = text or str(getattr(result, "structuredContent", "") or "") or "未返回错误详情"
+        raise RuntimeError(f"critic_gateway 返回错误: {detail[:4000]}")
+    return text
 
 
 async def invoke(action: str, project: str, sql: str) -> dict[str, object]:

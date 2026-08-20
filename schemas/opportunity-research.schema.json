@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Opportunity Research",
   "type": "object",
-  "required": ["mode", "opportunity_level", "topic", "target_audience", "signals", "no_signal_reason", "duplicates", "unavailable_sources", "sample_biases", "handoff_summary", "ledger_updates"],
+  "required": ["mode", "opportunity_level", "topic", "target_audience", "signals", "no_signal_reason", "duplicates", "unavailable_sources", "sample_biases", "handoff_summary", "ledger_updates", "frameworks_used"],
   "properties": {
     "mode": {"enum": ["casual_scan", "new_project", "current_product"]},
     "opportunity_level": {"enum": ["project", "feature"]},
@@ -16,7 +16,8 @@
     "unavailable_sources": {"type": "array", "items": {"type": "string"}},
     "sample_biases": {"type": "array", "items": {"type": "string"}},
     "handoff_summary": {"type": "string", "minLength": 1},
-    "ledger_updates": {"type": "array", "items": {"type": "object", "required": ["signal_id", "action", "status"], "properties": {"signal_id": {"type": "string"}, "action": {"enum": ["new", "update", "expire", "convert"]}, "status": {"enum": ["watching", "candidate", "converted", "expired", "rejected"]}}, "additionalProperties": false}}
+    "ledger_updates": {"type": "array", "items": {"type": "object", "required": ["signal_id", "action", "status"], "properties": {"signal_id": {"type": "string"}, "action": {"enum": ["new", "update", "expire", "convert"]}, "status": {"enum": ["watching", "candidate", "converted", "expired", "rejected"]}}, "additionalProperties": false}},
+    "frameworks_used": {"type": "array", "maxItems": 2, "items": {"type": "object", "required": ["id", "purpose", "input_basis", "output_used", "evidence_boundary"], "properties": {"id": {"enum": ["jtbd", "pain-solution-matrix", "user-journey-map", "mental-models", "elevator-pitch", "wardley-mapping"]}, "purpose": {"type": "string", "minLength": 1}, "input_basis": {"type": "string", "minLength": 1}, "output_used": {"type": "string", "minLength": 1}, "evidence_boundary": {"type": "string", "minLength": 1}}, "additionalProperties": false}}
   },
   "additionalProperties": false
 }

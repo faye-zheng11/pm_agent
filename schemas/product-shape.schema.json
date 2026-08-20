@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Product Shape",
   "type": "object",
-  "required": ["mode", "one_line_product", "target_users", "use_scenarios", "jobs", "problem", "alternatives", "value_proposition", "product_mechanism", "differentiation", "mvp_features", "non_goals", "information_architecture", "core_flow", "key_states", "facts", "assumptions", "evidence_gaps", "risks", "pm_decisions_required", "bet_draft", "prototype_recommendation", "handoff_summary"],
+  "required": ["mode", "one_line_product", "target_users", "use_scenarios", "jobs", "problem", "alternatives", "value_proposition", "product_mechanism", "differentiation", "mvp_features", "non_goals", "information_architecture", "core_flow", "key_states", "facts", "assumptions", "evidence_gaps", "risks", "pm_decisions_required", "bet_draft", "prototype_recommendation", "handoff_summary", "frameworks_used"],
   "properties": {
     "mode": {"enum": ["new_product", "existing_feature", "prd_delivery", "design_delivery", "concept_demo"]},
     "one_line_product": {"type": "string", "minLength": 10},
@@ -24,9 +24,11 @@
     "evidence_gaps": {"type": "array", "items": {"type": "string"}},
     "risks": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["risk", "impact", "mitigation"], "properties": {"risk": {"type": "string"}, "impact": {"type": "string"}, "mitigation": {"type": "string"}}, "additionalProperties": false}},
     "pm_decisions_required": {"type": "array", "items": {"type": "string"}},
-    "bet_draft": {"type": "object", "required": ["hypothesis", "success_signal", "window", "kill_condition", "fastest_test"], "properties": {"hypothesis": {"type": "string"}, "success_signal": {"type": "string"}, "window": {"type": "string"}, "kill_condition": {"type": "string"}, "fastest_test": {"type": "string"}}, "additionalProperties": false},
+    "bet_draft": {"type": "object", "required": ["pmf_stage", "primary_unknown", "expected_learning", "hypothesis", "success_signal", "window", "kill_condition", "fastest_test"], "properties": {"pmf_stage": {"enum": ["problem_signal", "solution_validation", "repeat_value", "business_model", "growth_readiness"]}, "primary_unknown": {"enum": ["problem", "target_user", "solution", "repeat_value", "business_model", "growth"]}, "expected_learning": {"type": "string", "minLength": 1}, "hypothesis": {"type": "string"}, "success_signal": {"type": "string"}, "window": {"type": "string"}, "kill_condition": {"type": "string"}, "fastest_test": {"type": "string"}}, "additionalProperties": false},
     "prototype_recommendation": {"type": "object", "required": ["recommended", "scope", "reason"], "properties": {"recommended": {"type": "boolean"}, "scope": {"type": "string"}, "reason": {"type": "string"}}, "additionalProperties": false},
-    "handoff_summary": {"type": "string", "minLength": 1}
+    "handoff_summary": {"type": "string", "minLength": 1},
+    "iteration_context": {"type": "object", "required": ["baseline_problem", "target_behavior_change", "protected_invariants", "rollout_plan", "rollback_condition"], "properties": {"baseline_problem": {"type": "string"}, "target_behavior_change": {"type": "string"}, "protected_invariants": {"type": "array", "items": {"type": "string"}}, "rollout_plan": {"type": "string"}, "rollback_condition": {"type": "string"}}, "additionalProperties": false},
+    "frameworks_used": {"type": "array", "maxItems": 2, "items": {"type": "object", "required": ["id", "purpose", "input_basis", "output_used", "evidence_boundary"], "properties": {"id": {"enum": ["jtbd", "pain-solution-matrix", "user-journey-map", "mental-models", "elevator-pitch", "wardley-mapping"]}, "purpose": {"type": "string", "minLength": 1}, "input_basis": {"type": "string", "minLength": 1}, "output_used": {"type": "string", "minLength": 1}, "evidence_boundary": {"type": "string", "minLength": 1}}, "additionalProperties": false}}
   },
   "additionalProperties": false
 }

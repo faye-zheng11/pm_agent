@@ -38,6 +38,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from gateway_client import GatewayError, chat_completion, post_json
 
 HTML_FILE = ROOT / "pm-workbench.html"
+MAX_MATERIAL_BYTES = 500_000_000
+UPLOAD_CHUNK_BYTES = 4_000_000
 CONFIG_FILE = Path.home() / ".config" / "pm-workbench" / "gateway.json"
 KEYCHAIN_SERVICE = "pm-workbench-ai-gateway"
 KEYCHAIN_ACCOUNT = "default"
@@ -56,6 +58,10 @@ CORE_PACKAGES = (
 )
 CORE_SKILLS = ("pmf-bet-brief", "prd-writing")
 CORE_WORKFLOW = "pm-idea-to-delivery"
+# 默认入口只展示这三个工作区。旧项目目录仍保留在本机，避免历史资料被误删，
+# 但不会继续污染新用户的项目选择器。
+CANONICAL_PROJECT_IDS = ("idol101", "idol109", "scratch-workspace")
+HIDDEN_LEGACY_PROJECT_IDS = {"idol102", "trial-kpop", "scratch-718eacc14f", "scratch-9997c3289d"}
 _runtime: AgentRuntime | None = None
 _runtime_lock = threading.Lock()
 _critic_gateway_probe: tuple[float, bool] | None = None
@@ -372,13 +378,17 @@ def runtime() -> AgentRuntime:
 
 
 def available_tools() -> set[str]:
-    tools = {"project_memory", "artifact_store", "signal_ledger", "material_inspector", "browser_review", "finding_ledger", "demo_builder"}
+    tools = {"project_memory", "artifact_store", "signal_ledger", "evidence_ledger", "material_inspector", "browser_review", "finding_ledger", "demo_builder"}
     if gateway_token() and (ROOT / "agent-packages" / "product-shaper" / "scripts" / "demo_gen.py").is_file():
         tools.add("demo_html")
     if gateway_token() and (ROOT / "agent-packages" / "user-experience-reviewer" / "scripts" / "ux_review.py").is_file():
         tools.add("persona_review")
+    # Reddit public search is provided by the bundled social ingest script and
+    # does not require Tavily. Keep web search's separate configuration gate.
+    if (ROOT / "agent-packages" / "opportunity-researcher" / "scripts" / "social_ingest.py").is_file():
+        tools.add("social_ingest")
     if tavily_key():
-        tools.update({"web_research", "social_ingest"})
+        tools.add("web_research")
     if critic_gateway_available():
         tools.add("data_gateway")
     return tools
@@ -390,19 +400,26 @@ def handlers() -> dict[str, Any]:
         result["demo_html"] = demo_html
     if "persona_review" in available_tools():
         result["persona_review"] = persona_review
-    if tavily_key():
-        result.update({"web_research": web_research, "social_ingest": social_ingest})
+    if "social_ingest" in available_tools():
+        result["social_ingest"] = social_ingest
+    if "web_research" in available_tools():
+        result["web_research"] = web_research
     if critic_gateway_available():
         result["data_gateway"] = data_gateway
     return result
 
 
-def task_details(task_id: str) -> dict[str, Any]:
+def task_details(task_id: str, project_id: str = "") -> dict[str, Any]:
     rt = runtime()
     task = rt.store.get(task_id)
+    if project_id and task.get("project_id") != project_id:
+        raise ContractError("任务不属于当前项目")
     task["events"] = rt.store.events(task_id)
     task["input_requests"] = rt.store.input_requests(task_id)
     task["approvals"] = rt.store.approvals(task_id)
+    if task.get("status") == "cancelled":
+        task["decision_status"] = "pm_veto"
+        task["decision_label"] = "PM 已否决"
     return task
 
 
@@ -454,12 +471,32 @@ def project_summary(project: dict[str, Any]) -> dict[str, Any]:
     def scalar(key: str) -> str:
         match = re.search(rf"(?m)^{re.escape(key)}:\s*['\"]?([^\n#'\"]*)", yaml_text)
         return match.group(1).strip() if match else ""
+    profile = read_json(project_path / ".workbench" / "project-profile.json", {})
     return {
         "id": project["id"], "name": project["name"], "stage": scalar("stage"),
         "version": scalar("version"), "active_bet": scalar("active_bet"),
         "active_feature": scalar("active_feature"), "objective": scalar("objective"),
         "temporary": project["id"].startswith("scratch-") or scalar("status") == "temporary",
+        "profile": profile if isinstance(profile, dict) else {},
     }
+
+
+def visible_projects() -> list[dict[str, Any]]:
+    """Return the clean default project set while keeping direct runtime access intact."""
+    discovered = runtime().projects.discover()
+    rows = []
+    for project_id in CANONICAL_PROJECT_IDS:
+        project = discovered.get(project_id)
+        if project:
+            rows.append(project_summary(project))
+    for project_id, project in discovered.items():
+        if project_id in CANONICAL_PROJECT_IDS or project_id in HIDDEN_LEGACY_PROJECT_IDS:
+            continue
+        # New formal projects remain selectable; random historical scratch folders do not.
+        if project_id.startswith("scratch-"):
+            continue
+        rows.append(project_summary(project))
+    return rows
 
 
 def imports_path(project: dict[str, Any]) -> Path:
@@ -536,6 +573,41 @@ def record_import(project: dict[str, Any], item: dict[str, Any]) -> dict[str, An
     return item
 
 
+def finalize_material_file(project: dict[str, Any], data: dict[str, Any], source_path: Path, size: int) -> dict[str, Any]:
+    """Move an uploaded file into the project and record it after all bytes arrive."""
+    if size <= 0 or size > MAX_MATERIAL_BYTES:
+        raise ContractError("材料为空或超过 500MB；大文件请拆分后分别上传")
+    name = normalize_upload_name(data.get("name") or source_path.name)
+    supersedes_id = str(data.get("supersedes_id") or "").strip()
+    previous_document = None
+    previous = None
+    previous_index = -1
+    if supersedes_id:
+        previous_document, previous, previous_index = find_import_item(project, supersedes_id)
+        if not material_is_active(previous):
+            raise ContractError("待替换资料已经不在当前资料范围内")
+    target = project["path"] / ".workbench" / "uploads" / f"{uuid.uuid4().hex[:8]}-{name}"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(source_path), str(target))
+    relative = target.relative_to(project["path"]).as_posix()
+    imported = record_import(project, {
+        "kind": str(data.get("source_kind") or "local_file"),
+        "status": "已导入",
+        "name": name,
+        "path": relative,
+        "original_path": str(data.get("relative_path") or name),
+        "bytes": size,
+        "material_version": data.get("material_version") or project_version(project),
+    })
+    if supersedes_id and previous_document is not None and previous is not None:
+        previous["status"] = "已被替换"
+        previous["replaced_by"] = imported["id"]
+        previous_document["items"][previous_index] = previous
+        write_imports(project, previous_document)
+    mark_intake_stale(project, f"资料“{name}”已上传")
+    return {"path": relative, "original_path": str(data.get("relative_path") or name), "item": imported}
+
+
 def find_import_item(project: dict[str, Any], item_id: str) -> tuple[dict[str, Any], dict[str, Any], int]:
     document = read_json(imports_path(project), {"schema_version": "1.1", "items": []})
     items = document.get("items", []) if isinstance(document, dict) else []
@@ -582,6 +654,8 @@ def classify_source_url(url: str) -> tuple[str, str]:
         return "figma", "待连接或授权"
     if "feishu.cn" in host or "feishu.com" in host or "larksuite.com" in host:
         return "feishu", "待连接或授权"
+    if "github.com" in host or "githubusercontent.com" in host:
+        return "github", "待读取仓库内容"
     return "external_link", "待读取"
 
 
@@ -728,7 +802,11 @@ def project_overview(project_id: str) -> dict[str, Any]:
     active_items = [item for item in items if material_is_active(item)]
     versions = sorted({material_version(project, item) for item in active_items} | {project_version(project)})
     tasks = rt.store.list(project_id=project_id)
+    artifacts = list_artifacts(project_id)
+    signals_document = read_json(project["path"] / ".workbench" / "opportunity-signals.json", {})
+    signals = signals_document.get("signals", []) if isinstance(signals_document, dict) else []
     runs = WorkflowScheduler(rt, available_tools()).list(project_id)
+    memory = rt.memory_hub(project_id).search(project_id, "", limit=8)
     active_run = next((run for run in runs if run.get("status") in {"running", "waiting_input", "waiting_approval"}), None)
     current_step = "尚未开始"
     current_detail = "可以从找机会或做产品开始"
@@ -756,16 +834,25 @@ def project_overview(project_id: str) -> dict[str, Any]:
     stage_labels = {"discovery": "探索期", "validation": "验证期", "delivery": "交付期", "iteration": "迭代期", "maintenance": "维护期"}
     return {
         "project": summary,
+        "profile": summary.get("profile") or {},
+        "memory": memory,
         "stage": {"value": summary.get("stage") or "unknown", "label": stage_labels.get(summary.get("stage"), "待确认"), "basis": "来自 project.yaml；若已有运行记录，当前任务单独展示"},
         "current": {"step": current_step, "detail": current_detail, "active_run_id": active_run.get("id") if active_run else ""},
         "materials": {
             "count": len(active_items),
             "items": list(reversed(active_items[-60:])),
-            "sources": [item for item in reversed(active_items) if item.get("kind") in {"figma", "feishu", "external_link"}][:10],
+            "sources": [item for item in reversed(active_items) if item.get("kind") in {"figma", "feishu", "github", "external_link"}][:10],
             "versions": versions,
             "current_version": project_version(project),
         },
         "tasks": tasks[:10],
+        "work_items": {
+            "total": len(tasks),
+            "active": [task for task in tasks if task.get("status") in {"queued", "running", "retrying", "waiting_input", "waiting_approval"}],
+            "closed": [task for task in tasks if task.get("status") in {"completed", "blocked", "failed", "cancelled"}][:20],
+        },
+        "artifacts": artifacts[:80],
+        "signals": signals[:40],
         "workflow_runs": runs[:5],
         "next_action": current_detail if active_run or tasks else "先补充项目资料，或启动找机会 / 做产品",
     }
@@ -776,7 +863,7 @@ def create_project(data: dict[str, Any]) -> dict[str, Any]:
     project_id = str(data.get("id") or "").strip().lower()
     name = str(data.get("name") or "").strip()
     if temporary and not project_id:
-        project_id = "scratch-" + uuid.uuid4().hex[:10]
+        project_id = "scratch-workspace"
     if not re.fullmatch(r"[a-z][a-z0-9-]{1,39}", project_id):
         raise ContractError("项目 ID 需为 2-40 位小写字母、数字或连字符")
     if temporary and not name:
@@ -785,6 +872,8 @@ def create_project(data: dict[str, Any]) -> dict[str, Any]:
         raise ContractError("项目名称不能为空")
     target = ROOT / "projects" / project_id
     if target.exists():
+        if temporary and project_id == "scratch-workspace":
+            return project_summary(runtime().projects.resolve(project_id))
         raise ContractError(f"项目已存在: {project_id}")
     shutil.copytree(ROOT / "projects" / "_template", target)
     replacements = {
@@ -850,6 +939,80 @@ def list_artifacts(project_id: str) -> list[dict[str, Any]]:
     return items
 
 
+def import_item_by_key(project: dict[str, Any], key: str) -> dict[str, Any]:
+    key = str(key or "").strip()
+    if not key:
+        raise ContractError("资料 key 不能为空")
+    document = read_json(imports_path(project), {"items": []})
+    items = document.get("items", []) if isinstance(document, dict) else []
+    for item in items:
+        if not material_is_active(item):
+            continue
+        if key in {str(item.get("id") or ""), str(item.get("path") or ""), str(item.get("url") or ""), str(item.get("name") or "")}:
+            return item
+    raise ContractError("资料不存在或已不在当前项目")
+
+
+def document_detail(project: dict[str, Any], path: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    path = str(path or "").strip()
+    if not path:
+        raise ContractError("文档路径不能为空")
+    safe_path = safe_project_path(project["path"], path, allow_runtime=True)
+    relative = safe_path.relative_to(project["path"]).as_posix()
+    allowed_root = relative.startswith(".workbench/agent-runs/") or relative.startswith("artifacts/")
+    if not allowed_root:
+        raise ContractError("只能读取当前项目的运行产物")
+    if not safe_path.is_file():
+        raise ContractError("文档不存在")
+    suffix = safe_path.suffix.lower()
+    formats = {
+        ".md": "markdown", ".markdown": "markdown", ".txt": "text", ".json": "json",
+        ".yaml": "yaml", ".yml": "yaml", ".csv": "text", ".html": "html", ".htm": "html",
+    }
+    result: dict[str, Any] = {"path": relative, "name": safe_path.name, "format": formats.get(suffix, "binary"), "metadata": metadata or {}}
+    if result["format"] in {"markdown", "text", "json", "yaml", "html"}:
+        result["content"] = safe_path.read_text(encoding="utf-8", errors="replace")[:500_000]
+        result["truncated"] = safe_path.stat().st_size > 500_000
+    elif suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif"} and safe_path.stat().st_size <= 4_000_000:
+        mime = mimetypes.guess_type(safe_path.name)[0] or "application/octet-stream"
+        result["format"] = "image"
+        result["preview_data_url"] = f"data:{mime};base64,{base64.b64encode(safe_path.read_bytes()).decode('ascii')}"
+    else:
+        result["size"] = safe_path.stat().st_size
+        result["content"] = "该文件类型暂不在网页内展开，请从项目目录打开原始文件。"
+    return result
+
+
+def material_detail(project: dict[str, Any], key: str) -> dict[str, Any]:
+    item = import_item_by_key(project, key)
+    result: dict[str, Any] = {"item": item, "name": item.get("name") or item.get("path") or item.get("url") or "项目资料", "format": "external" if item.get("url") and not item.get("path") else "binary"}
+    if item.get("url"):
+        result["url"] = item["url"]
+        result["status"] = item.get("status") or "待读取"
+    relative = str(item.get("path") or "").strip()
+    if not relative:
+        result["content"] = "这是一个外部来源。当前只登记了链接，是否能读取取决于对应的连接器和访问权限。"
+        return result
+    safe_path = safe_project_path(project["path"], relative, allow_runtime=True)
+    if not safe_path.is_file():
+        raise ContractError("项目资料文件不存在")
+    suffix = safe_path.suffix.lower()
+    if suffix == ".zip":
+        with zipfile.ZipFile(safe_path) as archive:
+            names = [name for name in archive.namelist() if not name.endswith("/")]
+        result.update({"format": "archive", "content": "\n".join(names[:100]), "truncated": len(names) > 100})
+        return result
+    if suffix in {".md", ".markdown", ".txt", ".json", ".yaml", ".yml", ".csv", ".html", ".htm"}:
+        formats = {".md": "markdown", ".markdown": "markdown", ".html": "html", ".htm": "html", ".json": "json", ".yaml": "yaml", ".yml": "yaml", ".csv": "text", ".txt": "text"}
+        result.update({"format": formats[suffix], "content": safe_path.read_text(encoding="utf-8", errors="replace")[:500_000], "truncated": safe_path.stat().st_size > 500_000})
+    elif suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif"} and safe_path.stat().st_size <= 4_000_000:
+        mime = mimetypes.guess_type(safe_path.name)[0] or "application/octet-stream"
+        result.update({"format": "image", "preview_data_url": f"data:{mime};base64,{base64.b64encode(safe_path.read_bytes()).decode('ascii')}", "content": ""})
+    else:
+        result.update({"format": "binary", "content": "该文件类型已登记，但暂不在网页内展开。"})
+    return result
+
+
 class Handler(SimpleHTTPRequestHandler):
     server_version = "PMWorkbench/2.0"
 
@@ -887,8 +1050,21 @@ class Handler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(body)
                 return
+            if parsed.path == "/assets/pm-rabbit-states.png":
+                asset = ROOT / "assets" / "pm-rabbit-states.png"
+                if not asset.is_file():
+                    self.send_error(404)
+                    return
+                body = asset.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "public, max-age=3600")
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if parsed.path == "/api/projects":
-                self.send_json({"projects": [project_summary(project) for project in runtime().projects.discover().values()]})
+                self.send_json({"projects": visible_projects()})
                 return
             if parsed.path == "/api/project":
                 self.send_json(project_summary(runtime().projects.resolve(project_id_from(self))))
@@ -898,6 +1074,16 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             if parsed.path == "/api/project/intake":
                 self.send_json(intake_document(runtime().projects.resolve(project_id_from(self))))
+                return
+            if parsed.path == "/api/project/material":
+                project_id = project_id_from(self)
+                project = runtime().projects.resolve(project_id)
+                key = (query.get("key") or [""])[0]
+                self.send_json({"ok": True, "project_id": project_id, **material_detail(project, key)})
+                return
+            if parsed.path == "/api/project/memory":
+                project_id = project_id_from(self)
+                self.send_json({"ok": True, "project_id": project_id, **runtime().memory_hub(project_id).search(project_id, str((query.get("q") or [""])[0]), limit=min(int((query.get("limit") or [12])[0]), 50))})
                 return
             if parsed.path == "/api/ai/status":
                 self.send_json(gateway_status())
@@ -911,7 +1097,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json({"tasks": tasks})
                 return
             if parsed.path == "/api/agents/task":
-                self.send_json(task_details((query.get("id") or [""])[0]))
+                self.send_json(task_details((query.get("id") or [""])[0], project_id_from(self)))
                 return
             if parsed.path == "/api/workflows":
                 project_id = project_id_from(self)
@@ -923,6 +1109,12 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             if parsed.path == "/api/artifacts":
                 self.send_json({"artifacts": list_artifacts(project_id_from(self))})
+                return
+            if parsed.path == "/api/artifact":
+                project_id = project_id_from(self)
+                project = runtime().projects.resolve(project_id)
+                path = (query.get("path") or [""])[0]
+                self.send_json({"ok": True, "project_id": project_id, **document_detail(project, path)})
                 return
             self.send_error(404)
         except (ContractError, StateTransitionError, ValueError) as exc:
@@ -960,6 +1152,11 @@ class Handler(SimpleHTTPRequestHandler):
                     goal=goal, decision_to_support=decision, source_artifacts=materials,
                     allowed_tools=allowed, authority_level="draft_write",
                     idempotency_key=str(data.get("idempotency_key") or ""),
+                    work_unit=str(data.get("work_unit") or "project"),
+                    work_unit_id=str(data.get("work_unit_id") or ""),
+                    version=str(data.get("version") or ""),
+                    memory_source="web",
+                    memory_session_id=f"web:{project_id}",
                 )
                 spawn(run_task, task["id"])
                 self.send_json({"ok": True, "task": task}, 201)
@@ -967,6 +1164,10 @@ class Handler(SimpleHTTPRequestHandler):
             if parsed.path == "/api/agents/update":
                 task_id = str(data.get("task_id") or "")
                 action = str(data.get("action") or "")
+                project_id = project_id_from(self, data)
+                task = runtime().store.get(task_id)
+                if task.get("project_id") != project_id:
+                    raise ContractError("任务不属于当前项目")
                 if action == "provide_input":
                     runtime().store.provide_input(str(data.get("input_id") or ""), data.get("responses") or {}, "pm")
                     spawn(run_task, task_id)
@@ -976,12 +1177,16 @@ class Handler(SimpleHTTPRequestHandler):
                     if approved:
                         spawn(run_task, task_id)
                 elif action == "retry":
-                    task = runtime().store.get(task_id)
                     runtime().store.transition(task_id, "queued", "pm", reason="PM 手动重试")
                     spawn(run_task, task["id"])
+                elif action == "cancel":
+                    if task.get("status") not in {"queued", "running", "waiting_input", "waiting_approval", "blocked", "retrying"}:
+                        raise StateTransitionError(f"任务 {task_id} 当前不能否决")
+                    note = str(data.get("note") or "PM 否决这条工作线")[:500]
+                    runtime().store.transition(task_id, "cancelled", "pm", reason=note)
                 else:
                     raise ContractError("Agent 更新动作无效")
-                self.send_json({"ok": True, "task": task_details(task_id)})
+                self.send_json({"ok": True, "task": task_details(task_id, project_id)})
                 return
             if parsed.path == "/api/workflows/start":
                 project_id = project_id_from(self, data)
@@ -1005,6 +1210,61 @@ class Handler(SimpleHTTPRequestHandler):
                 else:
                     raise ContractError("Workflow 更新动作无效")
                 self.send_json({"ok": True, "run": run})
+                return
+            if parsed.path == "/api/materials/upload-chunk":
+                project_id = project_id_from(self, data)
+                project = runtime().projects.resolve(project_id)
+                upload_id = str(data.get("upload_id") or "").strip()
+                if not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", upload_id):
+                    raise ContractError("上传会话 ID 无效")
+                try:
+                    chunk_index = int(data.get("chunk_index"))
+                    total_chunks = int(data.get("total_chunks"))
+                except (TypeError, ValueError):
+                    raise ContractError("分片序号无效")
+                if total_chunks < 1 or total_chunks > 125 or chunk_index < 0 or chunk_index >= total_chunks:
+                    raise ContractError("分片数量或序号无效")
+                try:
+                    content = base64.b64decode(str(data.get("content_base64") or ""), validate=True)
+                except Exception as exc:
+                    raise ContractError("分片内容不是有效的 Base64") from exc
+                if not content or len(content) > UPLOAD_CHUNK_BYTES + 100_000:
+                    raise ContractError("分片为空或超过 4MB")
+                chunk_dir = project["path"] / ".workbench" / "upload-chunks" / upload_id
+                chunk_dir.mkdir(parents=True, exist_ok=True)
+                manifest_path = chunk_dir / "manifest.json"
+                manifest = read_json(manifest_path, {})
+                incoming_manifest = {
+                    "name": str(data.get("name") or "material.bin"),
+                    "relative_path": str(data.get("relative_path") or data.get("name") or "material.bin"),
+                    "source_kind": str(data.get("source_kind") or "local_file"),
+                    "material_version": data.get("material_version") or project_version(project),
+                    "supersedes_id": str(data.get("supersedes_id") or ""),
+                    "total_chunks": total_chunks,
+                }
+                if manifest and any(manifest.get(key) != incoming_manifest.get(key) for key in ("name", "relative_path", "total_chunks")):
+                    raise ContractError("上传会话的文件信息不一致")
+                if not manifest:
+                    manifest_path.write_text(json.dumps(incoming_manifest, ensure_ascii=False), encoding="utf-8")
+                    manifest = incoming_manifest
+                (chunk_dir / f"{chunk_index:06d}.part").write_bytes(content)
+                parts = sorted(chunk_dir.glob("*.part"))
+                complete = len(parts) == total_chunks and all((chunk_dir / f"{index:06d}.part").is_file() for index in range(total_chunks))
+                if not complete:
+                    self.send_json({"ok": True, "complete": False, "upload_id": upload_id, "received_chunks": len(parts), "total_chunks": total_chunks})
+                    return
+                total_size = sum(part.stat().st_size for part in parts)
+                if total_size > MAX_MATERIAL_BYTES:
+                    shutil.rmtree(chunk_dir, ignore_errors=True)
+                    raise ContractError("单个材料不能超过 500MB")
+                assembled = chunk_dir / "assembled.tmp"
+                with assembled.open("wb") as output:
+                    for index in range(total_chunks):
+                        with (chunk_dir / f"{index:06d}.part").open("rb") as part:
+                            shutil.copyfileobj(part, output, length=1024 * 1024)
+                result = finalize_material_file(project, manifest, assembled, total_size)
+                shutil.rmtree(chunk_dir, ignore_errors=True)
+                self.send_json({"ok": True, "complete": True, "upload_id": upload_id, **result}, 201)
                 return
             if parsed.path == "/api/materials/upload":
                 project_id = project_id_from(self, data)

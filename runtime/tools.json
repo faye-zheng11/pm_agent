@@ -37,6 +37,13 @@
       "description": "按 Project 保存机会信号，支持查重、更新、过期、淘汰和转入 Product Shaper；不修改 Canon。"
     },
     {
+      "id": "evidence_ledger",
+      "name": "Evidence Provenance Ledger",
+      "risk": "draft_write",
+      "approval": "policy",
+      "description": "在当前项目记录来源、访问状态、证据等级和主张之间的可追溯关系；不把未核验材料升级为事实。"
+    },
+    {
       "id": "material_inspector",
       "name": "Review Material Inspector",
       "risk": "read_only",

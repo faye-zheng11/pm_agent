@@ -79,7 +79,7 @@ for line in sys.stdin:
         request = json.loads(line)
         method = request.get("method")
         if method == "initialize":
-            respond(request.get("id"), {"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"pm-agent-engine","version":"2.0.0"}})
+            respond(request.get("id"), {"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"pm-agent-engine","version":"2.3.0"}})
         elif method == "tools/list":
             respond(request.get("id"), {"tools":[{"name":name,"description":item[0],"inputSchema":item[2]} for name,item in TOOLS.items()]})
         elif method == "tools/call":

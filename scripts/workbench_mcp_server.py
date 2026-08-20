@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -14,11 +16,28 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import cockpit_server as cockpit
 
 
+EXTERNAL_PROJECT_ALIASES = {
+    Path("/Users/apple/develop/code/idol 101").resolve(): "idol101",
+    Path("/Users/apple/develop/code/idol 109").resolve(): "idol109",
+}
+PROJECT_ID_ALIASES = {"idol-101": "idol101", "idol-109": "idol109"}
+
+
 def resolve_project(arguments: dict[str, Any]) -> str:
     candidate = str(arguments.get("project_id") or arguments.get("project") or os.environ.get("PM_AGENT_PROJECT") or "").strip()
     if not candidate:
         raise ValueError("请指定 project_id，例如 idol102；也可以设置 PM_AGENT_PROJECT")
     path = Path(candidate).expanduser()
+    if path.is_dir():
+        resolved_path = path.resolve()
+        aliased = EXTERNAL_PROJECT_ALIASES.get(resolved_path)
+        if aliased:
+            # Codex 在外部产品仓库工作时，仍写入工作台的 canonical Memory Hub，
+            # 因此网页和 Codex 不会各自维护一套“看起来相同”的记忆。
+            os.environ.pop("PM_AGENT_PROJECT_DIR", None)
+            cockpit._runtime = None
+            cockpit.runtime().projects.resolve(aliased)
+            return aliased
     if path.is_dir() and (path / "manifest.yaml").is_file():
         os.environ["PM_AGENT_PROJECT_DIR"] = str(path.resolve())
         cockpit._runtime = None
@@ -27,8 +46,9 @@ def resolve_project(arguments: dict[str, Any]) -> str:
             if project["path"].resolve() == path.resolve():
                 return project_id
         raise ValueError(f"目录不是有效项目: {path}")
-    cockpit.runtime().projects.resolve(candidate)
-    return candidate
+    canonical = PROJECT_ID_ALIASES.get(candidate, candidate)
+    cockpit.runtime().projects.resolve(canonical)
+    return canonical
 
 
 def run_agent(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -52,13 +72,14 @@ def run_agent(arguments: dict[str, Any]) -> dict[str, Any]:
     runtime_agent_id = package["runtime_agent_id"]
     active_tools = cockpit.available_tools()
     allowed = [tool for tool in runtime.registry.agents[runtime_agent_id]["allowed_tools"] if tool in active_tools]
+    material_paths = normalize_material_paths(project_id, arguments.get("material_paths") or arguments.get("source_artifacts") or [])
     task, _ = runtime.create_task(
         project_id=project_id,
         agent_id=runtime_agent_id,
         task_type=mode["task_type"],
         goal=goal,
         decision_to_support=decision,
-        source_artifacts=arguments.get("material_paths") or arguments.get("source_artifacts") or [],
+        source_artifacts=material_paths,
         allowed_tools=allowed,
         authority_level="draft_write",
         idempotency_key=str(arguments.get("idempotency_key") or ""),
@@ -68,6 +89,48 @@ def run_agent(arguments: dict[str, Any]) -> dict[str, Any]:
     worker = cockpit.AgentWorker(runtime, cockpit.gateway_model, cockpit.ToolExecutor(runtime, cockpit.handlers()))
     worker.run_with_retries(task["id"], "codex-workbench-worker")
     return cockpit.task_details(task["id"])
+
+
+def normalize_material_paths(project_id: str, values: Any) -> list[str]:
+    """Convert Codex file paths into project-relative, authorized material paths."""
+    if not isinstance(values, list):
+        raise ValueError("material_paths 必须是字符串数组")
+    project = cockpit.runtime().projects.resolve(project_id)
+    project_path = project["path"].resolve()
+    normalized: list[str] = []
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("material_paths 只能包含非空字符串")
+        item = value.strip()
+        if item.startswith(("http://", "https://")):
+            normalized.append(item)
+            continue
+        candidate = Path(item).expanduser()
+        if candidate.is_absolute():
+            resolved = candidate.resolve()
+            try:
+                relative = resolved.relative_to(project_path).as_posix()
+            except ValueError:
+                if not resolved.is_file():
+                    raise ValueError(f"外部材料不存在或不是文件: {item}")
+                # Explicitly supplied external files become a project-owned upload.
+                # This preserves project isolation while making Codex absolute paths usable.
+                digest = hashlib.sha256(
+                    f"{resolved}:{resolved.stat().st_size}:{resolved.stat().st_mtime_ns}".encode("utf-8")
+                ).hexdigest()[:12]
+                upload_dir = project_path / ".workbench" / "uploads"
+                upload_dir.mkdir(parents=True, exist_ok=True)
+                target = upload_dir / f"codex-{digest}-{resolved.name}"
+                if not target.exists():
+                    shutil.copy2(resolved, target)
+                relative = target.relative_to(project_path).as_posix()
+            normalized.append(relative)
+            continue
+        prefix = f"projects/{project_path.name}/"
+        if item.startswith(prefix):
+            item = item[len(prefix):]
+        normalized.append(item)
+    return list(dict.fromkeys(normalized))
 
 
 def run_workflow(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -131,7 +194,7 @@ for line in sys.stdin:
         request = json.loads(line)
         method = request.get("method")
         if method == "initialize":
-            respond(request.get("id"), {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "pm-workbench", "version": "2.1.0"}})
+            respond(request.get("id"), {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "pm-workbench", "version": "2.3.0"}})
         elif method == "tools/list":
             respond(request.get("id"), {"tools": [{"name": name, "description": item[0], "inputSchema": item[2]} for name, item in TOOLS.items()]})
         elif method == "tools/call":

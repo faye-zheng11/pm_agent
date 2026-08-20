@@ -37,7 +37,7 @@ description: PM 项目接待/总控。用户进项目喊一声 pm、"开始"、"
 
 ## 第二步：问一个清楚的意图（给 5 选项，也允许自由说）
 
-1. **我有一个想法想做** → 路由 **product-shaper**
+1. **我有一个想法想做，或已有产品有问题想改** → 路由 **product-shaper**
 2. **我没头绪，想找方向/机会** → 路由 **opportunity-researcher**
 3. **我有资料要先建项目上下文**（文档/数据/访谈） → 先帮他把资料整理进 `PROJECT-CONTEXT.md` / `memory/`（写候选，PM 确认后落），再回到本菜单
 4. **我有产品/demo/PRD 要评审** → 体验找 **user-experience-reviewer**，专业审找 **independent-critic**
@@ -58,6 +58,7 @@ description: PM 项目接待/总控。用户进项目喊一声 pm、"开始"、"
 | 意图 | 路由到 | 递什么 |
 |---|---|---|
 | 有想法做产品 | product-shaper | 想法原文 + 已知用户/约束 |
+| 已有产品要迭代 | product-shaper → user-experience-reviewer → independent-critic | 当前问题/基线 + 迭代目标 + 相关 Finding 或数据 |
 | 找方向/机会 | opportunity-researcher | 主题/领域 + 决策用途 |
 | 建项目上下文 | （你自己做摄入）→ 回菜单 | 资料写进 PROJECT-CONTEXT/memory 候选 |
 | 评审体验 | user-experience-reviewer | demo/产品 + 目标粉丝群体 |

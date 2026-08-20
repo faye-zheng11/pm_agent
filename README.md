@@ -22,6 +22,18 @@
 
 这套能力是**刻意精选**的：宁可交几件打磨到位的，也不堆数量。确定性预检、网页研究、社媒归一、浏览器走查、项目文件、台账、Demo、Figma 与数据连接都是**隐藏工具**，服务于上面的能力，不单独算成一个 Agent 或 Skill。
 
+### 当前重点：三张主牌
+
+`opportunity-researcher` 是前置输入能力，负责把外部信号整理成可交给产品团队判断的材料。本工作台的主要使用闭环是：
+
+```text
+Product Shaper：想法 / 问题 → 产品方案与 Bet
+→ User Experience Reviewer：模拟用户走查 → 具体体验问题
+→ Independent Critic：证据与反例评审 → 继续 / 收窄 / 暂停 / 打回
+```
+
+新产品使用 Product Shaper 的“从想法做新产品”；已有产品使用“现有产品迭代 / 功能优化”，必须先看当前问题、基线和既有 Finding。UX Reviewer 负责判断用户是否真的能理解和完成任务，Critic 负责判断需求、方案、证据和阶段准备度，不把三者混成一个只会输出长文的 Agent。
+
 ## 安装（macOS）
 
 前置：Python 3.11+；已登录 Codex（`~/.codex/auth.json`）**或**自备网关 API Key。
@@ -64,7 +76,9 @@ pm
 需要指定项目时把项目 ID 写进指令，或设 `PM_AGENT_PROJECT`；完整流程共用同一个项目上下文：
 
 ```text
-在项目 idol102 中，使用 product-shaper 的 existing_feature 模式，判断这个功能是否值得做。
+在项目 idol102 中，使用 product-shaper 的 existing_feature 模式，基于当前问题和数据基线设计一次迭代。
+在项目 idol102 中，使用 user-experience-reviewer 的 product_plan 模式，比较当前版本和迭代方案的用户路径。
+在项目 idol102 中，使用 independent-critic 的 decision_review 模式，判断这次迭代是需求不成立、方案没做好，还是可以继续投入。
 在项目 kpop-demo 中，启动 pm-idea-to-delivery，目标是验证私密追星回顾，决定是否进入用户验证。
 ```
 
@@ -72,7 +86,7 @@ pm
 
 ## 四个 Agent
 
-- **Opportunity Researcher · 找机会**：多轮公开检索、原文回读、多源交叉、社媒归一、来源快照、信号台账；最多返回五条机会。登录墙内或私密社媒不会被包装成已抓取。
+- **Opportunity Researcher · 找机会**（前置输入）：多轮公开检索、原文回读、多源交叉、社媒归一、来源快照、信号台账；最多返回五条机会。登录墙内或私密社媒不会被包装成已抓取。本轮重点不是继续扩张它，而是把输出稳定交给下面三张主牌。
 - **Product Shaper · 做产品**：通过追问把一句想法收敛为目标用户、情境、任务、替代、价值、机制、MVP、信息架构、流程、状态、风险和 PMF Bet；经 PM 门禁后才调 `prd-writing` 出正式 PRD、设计任务或概念 Demo。
 - **User Experience Reviewer · 用户试用**：用适合当前项目的模拟粉丝群体走查想法、方案、PRD、Figma 或 HTML Demo；Demo 模式在 Playwright 可用时真实点击，不可用时明确降级。模拟结果不替代真人证据。
 - **Independent Critic · 独立评审**：先用普通中文说是否值得继续，再给阶段、证据、反例、Finding、可做/不可做、优化路径和 `Pass / Conditional / Block`；复审维护 Finding 生命周期。
@@ -110,6 +124,10 @@ PM 的长期记忆分成三层：
 - 用户层：只保存用户明确确认的跨项目工作习惯，位于 `~/.config/pm-workbench/user-memory.db`，不保存 101/102 的产品内容。
 
 在 Codex 或 Claude 中，`pm` 会先调用 `pm_memory context`，每轮通过 `append_turn` 追加原始对话；只有用户明确说“记住这个”“这是决定”“以后都按这个习惯”时，才提交并确认结构化记忆。没有接入 PM Skill/MCP 的普通聊天，宿主不会自动提供给 Agent，系统也不会声称它已经同步。
+
+### 证据与运行 Trace
+
+每个项目的 `.workbench/evidence-ledger.json` 保存来源和主张的关系。外部链接使用真实 URL，项目内材料使用 `project://相对路径`；来源访问失败、需要登录或已经过期时，状态会保留为 `unavailable`、`login_required` 或 `stale`，不会被包装成已核验事实。四个 Agent 的结果会自动补充运行时 Trace，展示实际模型步骤、工具调用、成功工具和失败工具。
 
 ## 加 Claude（可选，和 Codex 共用一套）
 

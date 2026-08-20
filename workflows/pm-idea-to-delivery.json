@@ -7,9 +7,9 @@
   "nodes": [
     {"id":"context_preflight","kind":"preflight","required_files":["HOME.md","PROJECT-CONTEXT.md","project.yaml","agent-config.json"]},
     {"id":"opportunity","kind":"agent","agent":"opportunity_researcher","task_type":"opportunity.scan","instruction":"围绕目标用户与本次决定完成多轮公开研究、原文回读、来源交叉和信号台账，最多输出五条可靠机会。","authority_level":"draft_write"},
-    {"id":"shaping","kind":"agent","agent":"product_shaper","task_type":"product.shape","instruction":"把机会塑造成完整产品方案，并使用 pmf-bet-brief 形成可证伪 Bet；不得提前冒充正式 PRD。","authority_level":"draft_write"},
+    {"id":"shaping","kind":"agent","agent":"product_shaper","task_type":"product.shape","instruction":"把机会塑造成完整产品方案，并使用 pmf-bet-brief 形成可证伪 Bet；明确当前 pmf_stage、本轮 primary_unknown、expected_learning 和不验证的内容；不得提前冒充正式 PRD。","authority_level":"draft_write"},
     {"id":"experience","kind":"agent","agent":"user_experience_reviewer","task_type":"ux.product","instruction":"用适合当前项目的模拟用户组完成六段旅程走查，分开真人证据与模拟假设。","authority_level":"draft_write"},
-    {"id":"decision_review","kind":"agent","agent":"independent_critic","task_type":"review.decision","instruction":"独立审查机会、产品方案、Bet 和体验风险，输出与 Findings 一致的 Pass、Conditional 或 Block。","authority_level":"draft_write"},
+    {"id":"decision_review","kind":"agent","agent":"independent_critic","task_type":"review.decision","instruction":"独立审查机会、产品方案、Bet 和体验风险，判断当前 PMF 验证层级、六项证据状态和伪 PMF 风险，并输出与 Findings 一致的 Pass、Conditional 或 Block。","authority_level":"draft_write"},
     {"id":"pm_product_decision","kind":"human_approval","approval_type":"product_decision"},
     {"id":"prd","kind":"agent","agent":"product_shaper","task_type":"product.prd","instruction":"PM 产品门禁已通过。使用 prd-writing 生成中文正式 PRD；保持已确认范围，未确认内容继续标待决策。","authority_level":"draft_write"},
     {"id":"design","kind":"agent","agent":"product_shaper","task_type":"product.design","instruction":"基于已确认 PRD 生成设计规范、信息架构、页面与状态任务；Figma 不可用时交付可执行设计任务，不伪造写入。","authority_level":"draft_write"},

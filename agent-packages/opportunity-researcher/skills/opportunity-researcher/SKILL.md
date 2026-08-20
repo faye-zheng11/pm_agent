@@ -10,6 +10,7 @@ description: 研究公开用户内容、社区、竞品、应用商店和行业�
 - `references/operating-protocol.md`：多轮研究与信号台账协议。
 - `references/domain-playbook.md`：机会质量与 K-pop 场景判断。
 - `references/contract.md`：输入输出契约。
+- `runtime/references/framework-catalog.md`：选择 JTBD 或痛点解决矩阵时的适用边界。
 - Package Runtime 的 `runtime/references/stage-gating.md`：先按探索、验证、扩张或维护选择研究尺度。
 
 在工作台或独立浏览器版中，通过 Package 自带的 AgentEngine 运行；不要把本入口降级成一次问答。
@@ -28,3 +29,5 @@ description: 研究公开用户内容、社区、竞品、应用商店和行业�
 6. 用中文输出，并把结果交给 Product Shaper，而不是替 PM 立项。
 
 所有来源、工具调用、失败与降级都写入 Trace。读取不到原文时必须标记未核验。
+
+每次结果都要填写 `frameworks_used`。最多选择两个本 Agent 适用框架；框架只帮助把信号组织成用户任务或机会筛选，不构成来源证据。没有合适框架时返回空数组。
